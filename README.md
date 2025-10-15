@@ -1,7 +1,6 @@
 
 # lwdid
-Stata package implementing the Rolling Estimation Method proposed in
-[Lee and Wooldridge (2025)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
+Stata package that implements the __Rolling Estimation Method__ proposed by [Lee and Wooldridge (2025)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686) for Difference-in-Differences estimation.
 
 The current version (v1.0) of `lwdid` is designed for panel data with small-N Cross-sectional sample sizes and common treatment timing. A forthcoming update will extend it to staggered intervention designs, and  large-N panels ([Lee and Wooldridge (2023)](https://dx.doi.org/10.2139/ssrn.4516518)
 
