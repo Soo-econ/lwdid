@@ -1,3 +1,3 @@
 v 1
-d Authors: Soo Jeong Lee* and Jeffrey M. Wooldridge** (*Southern Illinois University Carbondale, ** Michigan State University)
+d Lee and wooldridge (2025), Available at {browse "https://dx.doi.org/10.2139/ssrn.5325686":SSRN 5325686}
 p lwdid
