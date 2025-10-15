@@ -1,7 +1,8 @@
 
 # lwdid
 Stata package to implement he Rolling Estimation Method proposed in Lee and Wooldridge (2025).
-[``Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes'']([https://pages.github.com/](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)).
+
+[``Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes''(https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)]
 
 
 The current version 1.0 of lwdid is for small-N (Cross-sectional sample size) panel data with common treatment timing. 
