@@ -4,8 +4,7 @@
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 
 *! This command is currently designed for the ****common timing case with small N *****. 
-*! An extension to handle staggered intervention designs and large N settings (see Lee & Wooldridge, 2023, ) is under development — stay tuned for updates :)
-
+*! A forthcoming version will extend the method to accommodate staggered treatment adoption and {it:large-N} panels (see, e.g., Lee and Wooldridge (2023))
 **********************************************************************************************************************
 *! SYNTAX
 *!     lwdid y d, ivar(id) tvar(year [quarter]) post(post)
@@ -52,11 +51,6 @@
 *!                   and N_1 (N_0) is the number of treated (control) units.
 
 
-*!   save(string)   Save a copy of the dataset with the residualized outcome (new_y)
-*!                to a new .dta file. The file is saved as "lw_<string>.dta".
-*!               After saving, the command automatically reloads this file and
-*!                continues analysis.
-
 *!   gid(id)   Choose what to plot on the treated side in the graph.
 *!                    - If omitted: the command plots the treated-group average
 *!                      of the residualized outcome over time.
@@ -96,7 +90,6 @@ program define lwdid, eclass sortpreserve
         ROLLING(name) ///
        [ GID(string) ///
   CONTROLS(varlist) ///
-  SAVE(string) ///
   GRAPH ///
   GOPTS(string asis) ///
   TABLE(string) ///
