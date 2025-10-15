@@ -2,7 +2,7 @@
 # lwdid
 Stata package that implements the __Rolling Method__ proposed by [Lee and Wooldridge (2025)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686) for Difference-in-Differences estimation.
 
-The current version (v1.0) of `lwdid` is designed for panel data with small-N Cross-sectional sample sizes and common treatment timing. A forthcoming update will extend it to staggered intervention designs, and  large-N panels ([Lee and Wooldridge (2023)](https://dx.doi.org/10.2139/ssrn.4516518)
+The current version (v1.0) of `lwdid` is designed for panel data with small cross-sectional sample sizes (__small N__) and __common treatment timing__. A forthcoming update will extend the command to handle staggered intervention designs, and  large-N panels ([Lee and Wooldridge (2023)](https://dx.doi.org/10.2139/ssrn.4516518)
 
 The command estimates a single post-treatment effect and period-by-period ATTs by transforming unit-level outcomes to remove pre-treatment means or trends (seaonality), following the rolling estimation framework.
 <br>
