@@ -1,8 +1,8 @@
 v 1
 d lwdid  Rolling Method for Small N panel data (Lee & Wooldridge 2025)
 d Authors: Soo Jeong Lee (SIUC) and Jeffrey M. Wooldridge (MSU)
-d Contact: soojeong.lee@siu.edu, wooldri1@msu.edu
-d Repository: https://github.com/Soo-econ/lwdid
+d Contact: {browse "mailto:soojeong.lee@siu.edu":soojeong.lee@siu.edu}, {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+d https://github.com/Soo-econ/lwdid
 d Data: 15OCT2025
 f lwdid.ado
 f lwdid.sthlp
