@@ -12,7 +12,7 @@ The command estimates a single post-treatment effect and period-by-period ATTs b
 - [Citation](#citation)
 - [Syntax](#syntax)
 - [Examples](#examples)
-- [Contact and Updates](#contactandupdates)
+- [Contact and Updates](#contact-and-updates)
 
 <br>
 
