@@ -171,7 +171,7 @@ lwdid y d, ivar(id) tvar(year qt) post(post) rolling(detrendq) graph
 ```
 This specification performs __a quarter-specific detrending transformation__ and plots the residualized treated and control series over year-quarter time.
 
-
+<br>
 
 ### [Example 4] Randomization Inference (RI) p-values
 
@@ -186,6 +186,8 @@ The calculated RI p-value will be reported at __the end of the results__ (see be
 
 ![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex4.png)
 
+
+<br>
 
 If you want fully reproducible results, you can specify the seed using `riseed()`. Simillarly you can specify the number of replications using `rireps()`.
 
