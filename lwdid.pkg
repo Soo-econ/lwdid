@@ -1,5 +1,5 @@
 v 1
-d lwdid (Lee & Wooldridge 2025), Rolling Estimator for Small N (Cross-Sectional Sample Size)
+d lwdid (Lee & Wooldridge 2025), Rolling Estimation Method for Small N (Cross-Sectional Sample Size)
 d Authors: Soo Jeong Lee (SIUC) and Jeffrey M. Wooldridge (MSU)
 d Contact: soojeong.lee [at] siu.edu, wooldri1 [at] msu.edu
 d https://github.com/Soo-econ/lwdid
@@ -8,4 +8,5 @@ d Data: 15OCT2025
 f lwdid.ado
 f lwdid.sthlp
 f smoking.dta
+
 
