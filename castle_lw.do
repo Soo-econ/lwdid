@@ -81,10 +81,7 @@ qui forval year = 2005/2009 {
 
 
 
-**# Single effect (7.18) and (7.19) in our manuscript.
-
-**## First, getting y_dot_bar (average across post-period)
-
+**# Single treatment effect estimated following equations (7.18) and (7.19) in our manuscript.
 *! ever-treated indicator
 gen d = (first_year !=0)
 label var d "ever-treated indicator, = 1 if eventually treated"
@@ -152,6 +149,7 @@ reg ydott_bar d if year==2007
 
 *! SDiD
 sdid lhomicide state year castle, vce(placebo)
+
 
 
 
