@@ -89,7 +89,7 @@ qui forval year = 2005/2009 {
 gen d = (first_year !=0)
 label var d "ever-treated indicator, = 1 if eventually treated"
 
-*! post-average
+**###[1] post-average for treated units
 forval year = 2005/2009 {
 bys state:	egen double ybar_temp_`year' = mean(cond(year>=`year'& d==1,y`year'd,.))
 }
@@ -99,8 +99,8 @@ bys state:	egen double ybart_temp_`year' = mean(cond(year>=`year'& d==1,y`year'd
 }
 
 
-*! weighted post-average for control units
- 
+**###[2] weighted post-average for control units
+
 *! weights in post-period w = N_g/N_treat
 replace first_year=. if first_year==0
 tab first_year, matcell(freqs) 
@@ -115,7 +115,6 @@ forvalues year = 2005/2009 {
     bysort state: egen double ybar_cont_`year' = mean(cond(year >= `year' & d == 0, w_g * y`year'd, .))
 }
 
-
 forvalues year = 2005/2009 {
     local i = `year' - 2004
     scalar w_g = w[`i',1]
@@ -123,7 +122,7 @@ forvalues year = 2005/2009 {
         mean(cond(year >= `year' & d == 0, w_g * y`year'dd, .))
 }
 
-
+**### [3] ydot_bar in eq (7.18)
 *! ydot_bar  (demeaning)
 gen ydot_bar = .
 forval year = 2005/2009 {
@@ -153,6 +152,7 @@ reg ydott_bar d if year==2007
 
 *! SDiD
 sdid lhomicide state year castle, vce(placebo)
+
 
 
 
