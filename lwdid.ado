@@ -483,8 +483,10 @@ else {
     label var se     "SE(ATT_t)"
     label var tstat  "t"
     label var pval   "p-value"
-    qui gen double ci_lw = beta - 1.96*se
-    qui gen double ci_up = beta + 1.96*se
+
+	scalar cr=invttail(e(df_r), 0.025)
+    qui gen double ci_lw = beta - cr*se
+    qui gen double ci_up = beta + cr*se
     order period tindex beta se ci_lw ci_up tstat pval N
 
     di as txt "=== Period-by-period post-treatment effects ==="
@@ -965,5 +967,6 @@ if "`ri'" != "" {
 
     restore
 end
+
 
 
