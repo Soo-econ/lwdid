@@ -943,7 +943,7 @@ else {
         ereturn local depvar     "`y'"
         ereturn local rolling    "`rolling'"
         ereturn local controls   "`controls'"
-        ereturn local gid  "`tid'"
+        ereturn local gid  "`gid'"
 
         ereturn scalar att       = __att_overall
         ereturn scalar se_att    = __se_overall
@@ -965,4 +965,5 @@ if "`ri'" != "" {
 
     restore
 end
+
 
