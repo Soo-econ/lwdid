@@ -77,6 +77,7 @@ set more off
 set trace off
 capture program drop lwdid
 program define lwdid, eclass sortpreserve
+    version 16.0
 
     *------------------------------------------------------------------------------*
     * (0) Parse syntax & basic checks
@@ -967,6 +968,7 @@ if "`ri'" != "" {
 
     restore
 end
+
 
 
 
