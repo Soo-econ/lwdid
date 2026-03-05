@@ -116,32 +116,28 @@ estimation procedure.
 {marker examples}{...}
 {title:Examples}
 
-
-        {bf: Example 1:} Large-N estimation (RA, demean transformation)
+{bf: Example 1:} Large-N estimation (RA, demean transformation)
 
         {cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}
 
+{bf: Example 2:} Large-N estimation (IPWRA, detrend transformation)
 
-        {bf: Example 2:} Large-N estimation (IPWRA, detrend transformation)
+        {cmd:. lwdid y x1 x2 x3, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) graph saving(mydata) gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
 
 {pstd}
 This example estimates treatment effects using the IPWRA estimator with the {cmd:detrend} transformation. 
 {pstd} The option {cmd:saving(mydata)} saves the estimates to {cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
-
-        {cmd:. lwdid y x1 x2 x3, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) graph saving(mydata) gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
-
+     
 {bf: Example 3:}  Small-N estimation (Quarterly data with detrending)
 
-{pstd}
+        {cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
+
 With {cmd:small} option, this will implement the small-N inferene procedure. Here, this example uses quarterly data with the {cmd:detrendq} transformation. 
 {pstd} When {cmd:detrendq} is used, the time variable must be specified as {cmd:tvar(year quarter)}.
 
-{pstd}
 Based on the treatment cohort variable {cmd:gvar(first_treat)}, {cmd:lwdid} automatically detects whether the design involves a single
 treatment cohort (common timing) or multiple cohorts (staggered adoption), and applies the corresponding estimation procedure described in
 Lee and Wooldridge (2025).
-
-        {cmd:. lwdid y, ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
 
 {marker citation}{...}
 {title:Citation}
@@ -166,6 +162,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
