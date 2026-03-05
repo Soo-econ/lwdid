@@ -116,8 +116,9 @@ estimation procedure.
 {marker examples}{...}
 {title:Examples}
 
-{bf:Example 1:} Large-N estimation (RA, demean transformation)
+{dlgtab:{bf:Example 1:} Large-N estimation (RA, demean transformation)}
 
+{phang}
 {cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}
 
 {bf:Example 2:} Large-N estimation (IPWRA, detrend transformation)
@@ -168,6 +169,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
