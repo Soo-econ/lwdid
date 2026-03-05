@@ -116,38 +116,33 @@ estimation procedure.
 {marker examples}{...}
 {title:Examples}
 
-{dlgtab:Large-N implementation}
-
-Example 1: Large-N estimation (RA, demean transformation)
-
-{cmd:. use example_panel, clear}
+{pstd}
+{bf: Example 1:} Large-N estimation (RA, demean transformation)
+{pstd}
 {cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}
 
-Example 2: Large-N estimation (IPWRA, detrend transformation)
+{pstd}
+{bf: Example 2:} Large-N estimation (IPWRA, detrend transformation)
 
-This example estimates treatment effects using the IPWRA estimator with the
-{cmd:detrend} transformation. The {cmd:graph} option plots the treated and
-control means of the transformed outcome over time. The option
-{cmd:saving(mydata)} saves the period-by-period WATT estimates to
-{cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
+{pstd}
+This example estimates treatment effects using the IPWRA estimator with the {cmd:detrend} transformation. 
+{pstd} The option {cmd:saving(mydata)} saves the estimates to {cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
 
+{pstd}
 {cmd:. lwdid y x1 x2 x3, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) graph saving(mydata) gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
 
-{dlgtab:Small-N implementation}
+{pstd}
+{bf: Example 3:}  Small-N estimation (Quarterly data with detrending)
 
-Example 3: Small-N estimation (Quarterly data with detrending)
-
-This example illustrates the small-N implementation using quarterly data
-with the {cmd:detrendq} transformation. When {cmd:detrendq} is used,
-the time variable must be specified as {cmd:tvar(year quarter)}.
-
-The treatment cohort variable specified in {cmd:gvar(first_treat)} indicates
-the first period each unit becomes treated. Based on this variable,
-{cmd:lwdid} automatically detects whether the design involves a single
-treatment cohort (common timing) or multiple cohorts (staggered adoption),
-and applies the corresponding estimation procedure described in
+{pstd}
+With {cmd:small} option, this will implement the small-N inferene procedure. Here, this example uses quarterly data with the {cmd:detrendq} transformation. 
+{pstd} When {cmd:detrendq} is used, the time variable must be specified as {cmd:tvar(year quarter)}.
+{pstd}
+Based on the treatment cohort variable {cmd:gvar(first_treat)}, {cmd:lwdid} automatically detects whether the design involves a single
+treatment cohort (common timing) or multiple cohorts (staggered adoption), and applies the corresponding estimation procedure described in
 Lee and Wooldridge (2025).
 
+{pstd}
 {cmd:. lwdid y, ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
 
 {marker citation}{...}
@@ -164,15 +159,15 @@ Lee, Soo Jeong, and Jeffrey M. Wooldridge (2023),
 Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SSSRN 4516518}.
 
 {marker author}{...}
-{title:Author}
+{title:Authors}
 
-{pstd}
-{bf:Soo Jeong Lee}, Southern Illinois University Carbondale,   
-{browse "mailto:soojeong.lee@siu.edu":soojeong.lee@siu.edu}
+    Soo Jeong Lee
+    Southern Illinois University Carbondale
+    {browse "mailto:soojeong.lee@siu.edu":soojeong.lee@siu.edu}
 
-{pstd}
-{bf:Jeffrey M. Wooldridge}, Michigan State University,   
-{browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+    Jeffrey M. Wooldridge
+    Michigan State University
+    {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
 
 
 
