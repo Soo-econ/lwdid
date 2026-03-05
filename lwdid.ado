@@ -3,15 +3,19 @@
 *! version 2.0 March 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
+*! https://github.com/Soo-econ/lwdid.git  [Readme]
 
 set more off
-set trace off
+*set trace off
 
 capture program drop lwdid
 capture program drop lwdid_small_single
 capture program drop lwdid_small_staggered
 capture program drop lwdid_large
 
+
+set trace on
+set tracedepth 1
 
 **# [1] MAIN PROGRAM: lwdid 
 ***>> Dispatches to the appropriate subroutine: lwdid_small_single/lwdid_small_staggered/lwdid_large
@@ -30,6 +34,7 @@ program define lwdid, eclass sortpreserve
 			 VCE(string)                         ///
 			 TABLE(string)                       ///
 			 GRAPH                               ///
+			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
 			 SAVING(string)                      ///
 			 GID(string)                         ///
@@ -111,6 +116,7 @@ program define lwdid_small_single, eclass
 			 VCE(string)                         ///
 			 TABLE(string)                       ///
 			 GRAPH                               ///
+			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
 			 SAVING(string)                      ///
 			 TITLE(string)                       ///
@@ -251,7 +257,7 @@ program define lwdid_small_single, eclass
             }
             else if "`rolling'"=="detrendq" {
                 if "`t2'"=="" {
-                    di as err "rolling(detrendq) requires tva r(year quarter)."
+                    di as err "rolling(detrendq) requires tvar(year quarter)."
                     exit 198
                 }
                 regress `y' c.`tindex' i.`t2' if `id'==`ii' & `post_'==0
@@ -304,7 +310,6 @@ program define lwdid_small_single, eclass
 		}
 
 		* --- build centered X and interactions ONCE (time-invariant X) ---
-		local RHS* --- build centered X and interactions ONCE (time-invariant X) ---
 		local RHS
 		local INTERACTS
 
@@ -656,10 +661,9 @@ program define lwdid_small_single, eclass
 			local TRLAB  "Treated (ID=`gid')"
 		}
 
-		* --- If graph requested, build x-axis + y-axis once, then plot     *
+	* --- If graph requested, build x-axis + y-axis once, then plot     *
 
 		if "`graph'" != "" {
-
 			*---------------- Determine x-axis type ----------------*
 			local ISYEAR = ("`t2'"=="")   // year-only if no quarter provided
 
@@ -710,7 +714,15 @@ program define lwdid_small_single, eclass
 				}
 				if missing(`lasttick') | (`lasttick' < `xmax') local labs "`labs' `xmax'"
 
-				local XL "xlabel(`labs', format(`xfmt') angle(vertical) labsize(small)) xscale(range(`xmin' `xmax'))"
+			* --- Construct x-axis ticks automatically and include event year
+				local labs2
+				foreach x of local labs {
+					if abs(`x' - `XLINE') > 1 {
+						local labs2 `labs2' `x'
+					}
+				}
+
+				local XL "xlabel(`labs2' `XLINE', format(`xfmt') labsize(small) nogrid) xscale(range(`xmin' `xmax'))"
 			}
 
 			*---------------- Y-axis ticks: nice step (>=0.1), aligned bounds, max tick count ----------------*
@@ -760,19 +772,50 @@ program define lwdid_small_single, eclass
 			}
 
 			local yfmt = cond(`ystep' >= 1, "%9.0f", "%9.1f")
-			local YL   "ylabel(`ymin2'(`ystep')`ymax2', format(`yfmt'))"
+			local YL   "ylabel(`ymin2'(`ystep')`ymax2', format(`yfmt') nogrid)"
 
-			*---------------- Plot (single call) ----------------*
+**## twoway [Small-N]
+
+		* --- detect monochrome scheme
+				local mono = 0
+					if strpos("`scheme'","mono") local mono = 1
+
+					if `mono' {
+						local col_tr black%80
+						local col_ct black%60
+						local pat_tr solid
+						local pat_ct dash
+						local gsch  "scheme(s1mono)"
+						local aheight "aspectratio(0.45)"
+					}
+					else {
+						local col_tr cranberry%90
+						local col_ct navy%70
+						local pat_tr solid
+						local pat_ct dash
+						local gsch  ""
+						local aheight ""
+					}
+
 			twoway ///
-				(line y_dot_cont `XVAR', lpattern(dash)  lcolor(stc1)) ///
-				(line `TRSER'    `XVAR', lpattern(solid) lcolor(stc2)) ///
-				, xline(`XLINE', lcolor(gray) lpattern(dash)) ///
-				  `XL' `YL' ///
-				  legend(order(1 "Control" 2 "`TRLAB'") pos(12) col(2)) ///
-				  ytitle("") xtitle("") title("") `gopts' ///
-				  `=cond(`ISYEAR', "", "plotregion(margin(b=14))")'
-		}
-
+				(line `TRSER' `XVAR', lpattern(`pat_tr') lcolor(`col_tr') lwidth(medthick)) ///
+				(line y_dot_cont `XVAR', lpattern(`pat_ct') lcolor(`col_ct') lwidth(medthick)) ///
+				, ///
+				xline(`XLINE', lcolor(gs8) lpattern(dash)) ///
+				`XL' ///
+				`YL' ///
+				legend(order(1 "Treated" 2 "Control") ///
+					   pos(2) ring(0) col(2) ///
+					   region(lcolor(none))) ///
+				graphregion(color(white)) ///
+				plotregion(color(white)) ///
+				`gsch' ///
+				`gopts' ///
+				`aheight' ///
+				`=cond(`ISYEAR', "", "plotregion(margin(b=14))")'
+			}
+			
+			
    * Store results in e()
         ereturn post `b' `V', esample(firstpost)
         ereturn local cmd        "lwdid"
@@ -819,6 +862,7 @@ program define lwdid_small_staggered, eclass
 			 VCE(string)                         ///
 			 TABLE(string)                       ///
 			 GRAPH                               ///
+			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
 			 SAVING(string)                      ///
 			 GID(string)                         ///
@@ -972,6 +1016,7 @@ program define lwdid_large, eclass
          VCE(string)                         ///
          TABLE(string)                       ///
          GRAPH                               ///
+		 SCHEME(string)						 ///
          GOPTS(string asis)                  ///
          SAVING(string)                      ///
          TITLE(string)                       ///
@@ -1014,7 +1059,10 @@ program define lwdid_large, eclass
 				local id `ivar'
 			}	
 				
-		
+		* --- Graph-scheme option
+			if "`scheme'" == "" {
+					local scheme s2color
+				}
 
 		* --- LARGE-N PATH  (wild bootstrap, staggered, influence-function)
 			di as txt "------------------------------------------------------------"
@@ -1530,28 +1578,47 @@ program define lwdid_large, eclass
                 local ymin = floor(`ylo'/`ystep')*`ystep'
                 local ymax = ceil(`yhi'/`ystep')*`ystep'
 				
-				
-			 twoway ///
-				(rcap lower_ci upper_ci ryear if ryear < 0, ///
-					lwidth(0.3) lcolor(navy%50)) ///
-				(rcap lower_ci upper_ci ryear if ryear >= 0, ///
-					lwidth(0.3) lcolor(cranberry%60)) ///
-				(line watt ryear, ///
-					lcolor(gs8) lwidth(thin)) ///
-				(scatter watt ryear if ryear < 0, ///
-					mcolor(navy%80) msymbol(circle) msize(medlarge)) ///
-				(scatter watt ryear if ryear >= 0, ///
-					mcolor(cranberry) msymbol(circle) msize(medlarge)) ///
-				, ///
-				yline(0, lcolor(gs10)) ///
-				xline(0, lcolor(gs10) lpattern(dash)) ///
-				xtitle("Time to Treatment (r)") ///
-				ytitle("WATT(r)") ///
-				title(`"`title'"') ///
-				xlabel(`xmin'(`xstep')`xmax' 0, labsize(small)) ///
-				ylabel(`ymin'(`ystep')`ymax', format(%5.2f)) ///
-				legend(off) ///
-				scheme(s1color) `gopts'
+**## twoway [Large N]
+
+		* mono scheme detection
+		local mono = strpos("`scheme'","mono")
+			if `mono' {
+
+				local col_pre black%50
+				local col_post black%70
+				local mcol_pre black%50
+				local mcol_post black%70
+			}
+			else {
+
+				local col_pre navy
+				local col_post cranberry
+				local mcol_pre navy%80
+				local mcol_post cranberry
+
+		}
+		twoway ///
+			(rcap lower_ci upper_ci ryear if ryear < 0, ///
+				lwidth(0.3) lcolor(`col_pre'%50)) ///
+			(rcap lower_ci upper_ci ryear if ryear >= 0, ///
+				lwidth(0.3) lcolor(`col_post'%60)) ///
+			(line watt ryear, ///
+				lcolor(gs8) lwidth(thin)) ///
+			(scatter watt ryear if ryear < 0, ///
+				mcolor(`mcol_pre') msymbol(circle) msize(medlarge)) ///
+			(scatter watt ryear if ryear >= 0, ///
+				mcolor(`mcol_post') msymbol(circle) msize(medlarge)) ///
+			, ///
+			yline(0, lcolor(gs10)) ///
+			xline(0, lcolor(gs10) lpattern(dash)) ///
+			xtitle("Time to Treatment (r)") ///
+			ytitle("WATT(r)") ///
+			title(`"`title'"') ///
+			xlabel(`xmin'(`xstep')`xmax' 0, labsize(small)) ///
+			ylabel(`ymin'(`ystep')`ymax', format(%5.2f)) ///
+			legend(off) ///
+			scheme(`scheme') ///
+			`gopts'
 						}
 					restore
 		 quietly{
