@@ -26,65 +26,54 @@
 {cmd:rolling(}{it:type}{cmd:)}
 [{it:options}]
 
+{marker argsopts}{...}
+{title:Arguments and Options}
+
+{synoptset 28 tabbed}{...}
 {synopthdr:Options}
 {synoptline}
 
 {syntab:Main variables}
-
-{synopt:{it:varlist}} Outcome variable followed by optional covariates(x-variables). Covariates are included only when both treated and control groups satisfy
-N1 > K+1 and N0 > K+1.{p_end}
+{synopt:{it:varlist}}Outcome variable followed by optional covariates (x-variables).{break}
+Covariates are included only if both treated and control groups satisfy N1 > K+1 and N0 > K+1.{p_end}
 
 {syntab:Required options}
-{synopt:{opt ivar(varname)}}Panel identifier (numeric or string){p_end}
-
-{synopt:{opt tvar(varlist)}}Time variable(s): {cmd:twoway({it:year}} for yearly data or  {cmd:twoway({it:year quarter}} for quarterly data-only with {cmd:small} option{p_end}
-
-{synopt:{opt gvar(varname)}}Treatment cohort variable indicating the first treated period for each unit. Units never treated should be coded as 0{p_end}
-
+{synopt:{opt ivar(varname)}}Panel identifier (numeric or string).{p_end}
+{synopt:{opt tvar(varlist)}}Time variable(s): {it:year} or {it:year quarter}.{break}
+Quarterly specification is supported when {cmd:small} is used.{p_end}
+{synopt:{opt gvar(varname)}}Treatment cohort variable (first treated period).{break}
+Never-treated units should be coded as 0.{p_end}
 {synopt:{opt rolling(type)}}Outcome transformation applied to {it:yvar}:{break}
-{bf:demean}    remove pre-treatment mean{break}
-{bf:detrend}   remove pre-treatment linear trend{break}
-{bf:demeanq}   demean + quarter effects (requires {cmd:tvar(year quarter)}){break}
-{bf:detrendq}  detrend + quarter effects (requires {cmd:tvar(year quarter)}){p_end}
+{space 6}{bf:demean}   remove pre-treatment mean{break}
+{space 6}{bf:detrend}  remove pre-treatment linear trend{break}
+{space 6}{bf:demeanq}  demean + quarter effects (requires {cmd:tvar(year quarter)}){break}
+{space 6}{bf:detrendq} detrend + quarter effects (requires {cmd:tvar(year quarter)}){p_end}
 
-{syntab:Large-N Required option}
-{synopt:{opt method(ra|ipw|ipwra)}}Estimation method for the large-N
-implementation: regression adjustment (RA), inverse probability weighting (IPW),
-or the doubly robust IPWRA estimator. This option is required unless the
-{cmd:small} option is specified{p_end}
-
-{syntab:Small-N Required option}
-{synopt:{opt small}}Use the small-sample inference procedure described in
-Lee and Wooldridge (2025). When this option is specified, the command
-switches to the small-N implementation{p_end}
+{syntab:Required (depends on implementation)}
+{synopt:{opt method(ra|ipw|ipwra)}}{it:Large-N only.} Estimation method for the large-N implementation.{break}
+Required unless {cmd:small} is specified.{p_end}
+{synopt:{opt small}}{it:Small-N only.} Switches to the small-sample inference procedure (Lee & Wooldridge, 2025).{p_end}
 
 {synoptline}
 
 {syntab:Optional options}
-{synopt:{opt saving(filename)}} Save the estimation results to disk (filename.dta).{p_end}
+{synopt:{opt saving(filename)}}Save estimation results to disk (filename.dta).{p_end}
+{synopt:{opt graph}}Display graphical results.{break}
+Large-N: weighted ATT estimates by relative time.{break}
+Small-N: treated vs. control means of residualized outcomes over time.{p_end}
+{synopt:{opt gopts(string)}}Additional {cmd:twoway} graph options (only with {cmd:graph}).{p_end}
+{synopt:{opt vce(vartype)}}Variance estimator for regression (e.g., {bf:robust}, {bf:cluster id}, {bf:hc3}).{p_end}
 
-{synopt:{opt graph}}Display graphical results. For the large-N implementation,
-plots weighted ATT estimates by relative time. For the small-N implementation,
-plots treated vs. control means of residualized outcomes over time{p_end}
+{syntab:Large-N specific options}
+{synopt:{opt reps(#)}}Bootstrap repetitions for large-N inference (default = 999).{p_end}
 
-{synopt:{opt gopts(string)}}Additional {cmd:twoway} graph options (effective only with {cmd:graph}){p_end}
-
-{syntab:Large-N options}
-{synopt:{opt reps(#)}}Number of bootstrap repetitions used for inference in the large-N implementation (default = 999){p_end}
-
-{syntab:Small-N options}
-{synopt:{opt gid(id)}}Select certain treated unit to plot (default: treated-group average){p_end}
-
-{synopt:{opt ri}}Perform randomization inference (RI) {p_end}
-
-{synopt:{opt rireps(#)}}Number of randomization repetitions (default = 1000){p_end}
-
-{synopt:{opt riseed(#)}}Set seed for RI reproducibility; if omitted, a random seed is drawn automatically{p_end}
-
-{synopt:{opt vce(vartype)}}Variance estimator for regression (e.g., {bf:robust}, {bf:cluster id}, or {bf:hc3}){p_end}
+{syntab:Small-N specific options}
+{synopt:{opt gid(id)}}Select treated unit to plot (default: treated-group average).{p_end}
+{synopt:{opt ri}}Perform randomization inference (RI).{p_end}
+{synopt:{opt rireps(#)}}Number of RI repetitions (default = 1000).{p_end}
+{synopt:{opt riseed(#)}}Seed for RI reproducibility (default: randomly drawn).{p_end}
 
 {synoptline}
-
 
 {marker description}{...}
 {title:Description}
@@ -175,12 +164,6 @@ estimation procedure described in Lee and Wooldridge (2025).
 {phang2}{cmd:. lwdid y, ivar(id) tvar(year quarter) gvar(first_treat) ///
 rolling(detrendq) graph}{p_end}
 
-{pstd}
-Example 4: You can modify graph appearance directly through the {cmd:gopts()} option.
-
-{phang2}{cmd:. lwdid y d, ivar(id) tvar(year) post(post) rolling(detrend) graph gopts(ytitle("Residualized outcome") xtitle("Year") legend(pos(1) ring(0)))}{p_end}
-
-{marker citation}{...}
 {title:Citation}
 
 {pstd}
