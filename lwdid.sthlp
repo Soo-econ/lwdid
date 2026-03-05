@@ -71,7 +71,7 @@ Small-N: treated vs. control means of residualized outcomes over time.{p_end}
 
 {synopt:{opt ri}}{it:Small-N only.}Perform randomization inference (RI).{p_end}
 
-{synopt:{opt rireps(#)}}{it:Small-N only.}Number of RI repetitions (default = 1000).{p_end}
+{synopt:{opt rireps(#)}}{it:Small-N only.}Number of RI repetitions (default = 999).{p_end}
 
 {synopt:{opt riseed(#)}}{it:Small-N only.}Seed for RI reproducibility (default: randomly drawn).{p_end}
 
@@ -173,6 +173,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
