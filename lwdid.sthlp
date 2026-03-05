@@ -139,16 +139,21 @@ mydata.dta. The gopts() option customizes the graph.
 {space 4}{cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
 
 
-{pstd}
-{bf:Example 1:} Large-N estimation (RA, demean transformation)}
-
-    lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph
+{dlgtab:Example 1}
 
 {pstd}
-{bf:Example 2:} Large-N estimation (IPWRA, detrend transformation)
+Large-N estimation (RA, demean transformation)}
 
-    lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) ///
-    graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
+{phang2}{cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}{p_end}
+    
+
+{dlgtab:Example 2}
+
+{pstd}
+Large-N estimation (IPWRA, detrend transformation)
+
+{phang2}{cmd:. lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) 
+    graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}{p_end}
 
 {pstd}
 This example estimates treatment effects using the IPWRA estimator with the
@@ -156,10 +161,11 @@ This example estimates treatment effects using the IPWRA estimator with the
 estimates to {cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
 
 
+{dlgtab:Example 3}
 {pstd}
-{bf:Example 3:} Small-N estimation (Quarterly data with detrending)
+Small-N estimation (Quarterly data with detrending)
 
-    lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph
+{phang2}{cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}{p_end}
 
 {pstd}
 With the {cmd:small} option, {cmd:lwdid} implements the small-N inference
@@ -197,6 +203,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
