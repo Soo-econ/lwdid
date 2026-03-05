@@ -29,7 +29,6 @@ net describe lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/)
 
  You should see a window like this:
  
-
 ![The Screenshot of results window](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex1.png)
 
 Then, install the package:
