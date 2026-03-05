@@ -37,7 +37,7 @@
 {synopt:{it:varlist}}Outcome variable followed by optional covariates (x-variables). Covariates are included only if both treated and control groups satisfy N1 > K+1 and N0 > K+1.{p_end}
 
 {syntab:Required options}
-{synopt:{opt ivar(varname)}}Panel identifier (numeric).{p_end}
+{synopt:{opt ivar(varname)}}Panel identifier (numeric or string).{p_end}
 
 {synopt:{opt tvar(varlist)}}Time variable(s): {it:year} or {it:year quarter}. Quarterly specification is supported when {cmd:small} is used.{p_end}
 
@@ -173,6 +173,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
