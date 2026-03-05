@@ -8,9 +8,13 @@ A Stata package that implements the __Rolling Difference-in-Differences Estimato
 The codebase is being updated and tested, and functionality may change.  
 Please do **not use this version yet** until the official release is announced.
 
-The stable version will be available once testing is completed.
 
 
+
+
+
+
+## V1.0 Legacy
 The current version (v1.0) of `lwdid` is designed for panel data with small cross-sectional sample sizes (__small N__) and __common treatment timing__.  **A forthcoming update** will extend the command **to handle staggered intervention designs, and  large-N panels** ([Lee and Wooldridge (2023)](https://dx.doi.org/10.2139/ssrn.4516518)
 > To replicate the results presented in Section 7.2 using `castle.dta`, please refer to `castle_lw.do`.
 
