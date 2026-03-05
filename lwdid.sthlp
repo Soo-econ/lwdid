@@ -116,11 +116,14 @@ estimation procedure.
 {marker examples}{...}
 {title:Examples}
 
-{dlgtab:{bf:Example 1:} Large-N estimation (RA, demean transformation)}
 
-{phang}
+{pstd}
+{bf:Example 1:} Large-N estimation (RA, demean transformation)}
+
 {cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}
 
+
+{pstd}
 {bf:Example 2:} Large-N estimation (IPWRA, detrend transformation)
 
 {cmd:. lwdid y x1 x2 x3, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) graph saving(mydata) gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
@@ -130,6 +133,8 @@ This example estimates treatment effects using the IPWRA estimator with the
 {cmd:detrend} transformation. The option {cmd:saving(mydata)} saves the
 estimates to {cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
 
+
+{pstd}
 {bf:Example 3:} Small-N estimation (Quarterly data with detrending)
 
 {cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
@@ -145,6 +150,7 @@ Based on the treatment cohort variable {cmd:gvar(first_treat)}, {cmd:lwdid}
 automatically detects whether the design involves a single treatment cohort
 (common timing) or multiple cohorts (staggered adoption), and applies the
 corresponding estimation procedure described in Lee and Wooldridge (2025).
+
 
 {marker citation}{...}
 {title:Citation}
@@ -169,6 +175,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
