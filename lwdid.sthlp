@@ -121,13 +121,10 @@ estimation procedure.
 
 {space 4}{cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}
 
-{pstd}
+
 {bf:Example 2:} Large-N estimation (IPWRA, detrend transformation)
 
-{space 4}{cmd:. lwdid y x1 x2 x3, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) ///
-{space 6}saving(mydata) graph ///
-{space 6}gopts(ytitle("Residualized average outcome") xtitle("Year") ///
-{space 6}title("The Effects of Walmart Opening"))}
+{space 4}{cmd:. lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
 
 {pstd}
 This example estimates treatment effects using the IPWRA estimator with the
@@ -138,34 +135,6 @@ mydata.dta. The gopts() option customizes the graph.
 {bf:Example 3:} Small-N estimation (Quarterly data with detrending)
 
 {space 4}{cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
-
-
-{dlgtab:Example 1}
-{pstd}
-{bf:Large-N estimation} (RA, demean transformation)}
-
-{phang2}{cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}{p_end}
-    
-
-{dlgtab:Example 2}
-
-{pstd}
-{bf:Large-N estimation} (IPWRA, detrend transformation)
-
-{phang2}{cmd:. lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}{p_end}
-
-{pstd}
-This example estimates treatment effects using the IPWRA estimator with the
-{cmd:detrend} transformation. The option {cmd:saving(mydata)} saves the
-estimates to {cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
-
-
-{dlgtab:Example 3}
-
-{pstd}
-{bf:Small-N estimation} (Quarterly data with detrending)
-
-{phang2}{cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}{p_end}
 
 {pstd}
 With the {cmd:small} option, {cmd:lwdid} implements the small-N inference
@@ -178,6 +147,7 @@ Based on the treatment cohort variable {cmd:gvar(first_treat)}, {cmd:lwdid}
 automatically detects whether the design involves a single treatment cohort
 (common timing) or multiple cohorts (staggered adoption), and applies the
 corresponding estimation procedure described in Lee and Wooldridge (2025).
+
 
 
 {marker citation}{...}
@@ -203,6 +173,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
