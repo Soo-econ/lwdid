@@ -1,12 +1,13 @@
-v 1
-d lwdid (Lee & Wooldridge 2025), Rolling Estimation Method for Small N (Cross-Sectional Sample Size)
+v 2.0
+d lwdid: Lee–Wooldridge rolling Difference-in-Differences estimator for small-N and large-N panel data
 d Authors: Soo Jeong Lee (SIUC) and Jeffrey M. Wooldridge (MSU)
 d Contact: soojeong.lee [at] siu.edu, wooldri1 [at] msu.edu
 d https://github.com/Soo-econ/lwdid
-d Data: 15OCT2025
-
+d Distribution-Date: 04MAR2026
+d
+d Requires: Stata 16+
+d
 f lwdid.ado
 f lwdid.sthlp
 f smoking.dta
-
-
+f castle.dta
