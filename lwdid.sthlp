@@ -116,13 +116,13 @@ estimation procedure.
 {marker examples}{...}
 {title:Examples}
 
-{pstd}
-{bf: Example 1:} Large-N estimation (RA, demean transformation)
+
+        {bf: Example 1:} Large-N estimation (RA, demean transformation)
 
         {cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}
 
-{pstd}
-{bf: Example 2:} Large-N estimation (IPWRA, detrend transformation)
+
+        {bf: Example 2:} Large-N estimation (IPWRA, detrend transformation)
 
 {pstd}
 This example estimates treatment effects using the IPWRA estimator with the {cmd:detrend} transformation. 
@@ -130,7 +130,6 @@ This example estimates treatment effects using the IPWRA estimator with the {cmd
 
         {cmd:. lwdid y x1 x2 x3, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) graph saving(mydata) gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
 
-{pstd}
 {bf: Example 3:}  Small-N estimation (Quarterly data with detrending)
 
 {pstd}
@@ -167,6 +166,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
