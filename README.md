@@ -33,12 +33,13 @@ net describe lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/)
 
 Then, install the package:
 ```
-net install lwdid
+net install lwdid, replace
 ```
+The `replace` option overwrites any previously installed version of **lwdid**.
 
-To downlowd the accompanying example dataset (SMOKING.DTA) for the manuscript replication or examples in the [Example](##Example) section, run:
+To downlowd the accompanying example datasets for the manuscript replication or examples in the [Example](##Example) section, run:
 ```
-net get lwdid
+net get lwdid, replace
 ```
 
 Alternatively, you can install and download everything directly from GitHub in one step: 
@@ -56,9 +57,16 @@ If installation from within Stata fails, the files can be downloaded manually fr
 lwdid is a user-written Stata command freely available for academic and research use.
 If you use this command in your work, please cite:
 
+### Large-N Procedure 
+Lee, Soo Jeong, and Jeffrey M. Wooldridge (2025),
+"_A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data,"
+Working Paper_, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
+
+### Small-N Procedure 
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2025),
 "_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
 Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
+
 
 <br>
 
