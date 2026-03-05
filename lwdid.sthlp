@@ -26,9 +26,6 @@
 {cmd:rolling(}{it:type}{cmd:)}
 [{it:options}]
 
-{marker Arguments and Options}{...}
-{title:Arguments and Options}
-
 {synopthdr:Options}
 {synoptline}
 
@@ -206,6 +203,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
 {pstd}
 {bf:Jeffrey M. Wooldridge}, Michigan State University,   
 {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
