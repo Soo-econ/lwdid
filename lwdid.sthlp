@@ -120,13 +120,13 @@ estimation procedure.
 {pstd}
 {bf:Example 1:} Large-N estimation (RA, demean transformation)}
 
-{cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}
-
+    lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph
 
 {pstd}
 {bf:Example 2:} Large-N estimation (IPWRA, detrend transformation)
 
-{cmd:. lwdid y x1 x2 x3, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) graph saving(mydata) gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
+    lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) ///
+    graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
 
 {pstd}
 This example estimates treatment effects using the IPWRA estimator with the
@@ -137,7 +137,7 @@ estimates to {cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
 {pstd}
 {bf:Example 3:} Small-N estimation (Quarterly data with detrending)
 
-{cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
+    lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph
 
 {pstd}
 With the {cmd:small} option, {cmd:lwdid} implements the small-N inference
@@ -175,6 +175,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
