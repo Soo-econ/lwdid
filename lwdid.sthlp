@@ -113,6 +113,7 @@ whether the design involves a single treatment cohort (common timing) or
 multiple cohorts (staggered adoption) and applies the appropriate
 estimation procedure.
 
+
 {marker examples}{...}
 {title:Examples}
 
@@ -140,9 +141,8 @@ mydata.dta. The gopts() option customizes the graph.
 
 
 {dlgtab:Example 1}
-
 {pstd}
-Large-N estimation (RA, demean transformation)}
+{bf:Large-N estimation} (RA, demean transformation)}
 
 {phang2}{cmd:. lwdid y, ivar(id) tvar(year) gvar(first_treat) rolling(demean) method(ra) graph}{p_end}
     
@@ -150,10 +150,9 @@ Large-N estimation (RA, demean transformation)}
 {dlgtab:Example 2}
 
 {pstd}
-Large-N estimation (IPWRA, detrend transformation)
+{bf:Large-N estimation} (IPWRA, detrend transformation)
 
-{phang2}{cmd:. lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) 
-    graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}{p_end}
+{phang2}{cmd:. lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}{p_end}
 
 {pstd}
 This example estimates treatment effects using the IPWRA estimator with the
@@ -162,8 +161,9 @@ estimates to {cmd:mydata.dta}. The {cmd:gopts()} option customizes the graph.
 
 
 {dlgtab:Example 3}
+
 {pstd}
-Small-N estimation (Quarterly data with detrending)
+{bf:Small-N estimation} (Quarterly data with detrending)
 
 {phang2}{cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}{p_end}
 
@@ -203,6 +203,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
