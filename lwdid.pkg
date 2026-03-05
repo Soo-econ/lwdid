@@ -9,5 +9,7 @@ d Requires: Stata 16+
 d
 f lwdid.ado
 f lwdid.sthlp
-f smoking.dta
-f castle.dta
+f lw_walmart.dta
+f lw_smoking.dta
+f lw_castle.dta
+
