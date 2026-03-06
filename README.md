@@ -25,13 +25,14 @@ Soo Jeong Lee, and Jeffrey M. Wooldridge (2025b),
 Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
 > Under review
 
+<br>
 
 # Contents
 - [Citation](#citation)
 - [Installation](#installation)
 - [Syntax](#syntax)
-- [Examples: Large-N](#large-n-case)
 - [Examples: Small-N](#small-n-case)
+- [Examples: Large-N](#large-n-case)
 - [Contact and Updates](#contact-and-updates)
 
 <br>
@@ -66,7 +67,6 @@ net get lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/)
 ```
 If installation from within Stata fails, the files can be downloaded manually from [my GitHub page](https://github.com/Soo-econ/lwdid.git)
 
-<br>
 
 <br>
 
@@ -111,7 +111,6 @@ help lwdid
 
 ---
 
-
 ## **Optional Options**
 
 ### Graph Options
@@ -130,25 +129,35 @@ help lwdid
 | `save(name)` | Saves estimation results under the specified name |
 | `reps(#)` |  **Large-N Only**. Number of wild bootstrap repetitions for large-N inference (default = 999) |
 | `vce(vartype)` | **Small-N Only:** Variance estimator for the regression (e.g., `var(robust)`, `var(cluster id)`, `var(hc3)`) |
-| `ri` |  **Small-N Only**. Requests randomization inference (RI) <br>•`rireps(#)` –Number of RI repetitions (default = 999).<br>•`riseed(#)` – Seed for reproducible RI (default: randomly drawn; results may differ across runs if not specified)|
+| `ri` |  **Small-N Only**. Requests randomization inference (RI) <br>•`rireps(#)` –Number of RI repetitions (default = 999).<br>•`riseed(#)` – Seed for reproducible RI p-value (default: randomly drawn; results may differ across runs if not specified)|
 
 ---
 
 <br>
 
 # Examples
-# Large-N case
+
+This section illustrates basic usage of `lwdid` and shows how to replicate the main results reported in the accompanying papers.
 
 # Small-N case
+
 First, load the dataset:
 ```
-use smoking, clear
+use lw_smoking, clear
 ```
+
+> ⚠️ **Important:** The `small` option must be specified for small-N settings.
+
+<br>
 
 ## \[Example 1\] Detrended transformation and graph
 ```
-lwdid lcigsale, ivar(state) tvar(year) gvar(first_year) post(post) rolling(detrend) graph
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) graph
 ```
+
+Here, `gvar(first_year)` specifies the first treatment year for each unit (never-treated units should be coded as `0`).  
+In this example, only California is treated in 1989, so this is a **single-treatment case**. If multiple units are treated in different years, `lwdid` automatically detects this and applies the **small-N staggered adoption** procedure.
+
 By specifying `rolling(detrend)`, the command performs a __unit-specific detrending tranformation__, allowing each unit to follow its own heterogeneous linear trend and thereby relaxing the parallel trends (PT) assumption.
 
 Alternatively, you can use
@@ -169,7 +178,6 @@ lwdid y, ivar(state) tvar(year q) gvar(first_year) rolling(detrendq) graph
 ```
 This plots the residualized treated and control series over year-quarter time.
 
-
 By default, `lwdid` reports both:
 
 * the **overall (single) treatment effect**, and
@@ -177,27 +185,26 @@ By default, `lwdid` reports both:
 
 <br>
 
+## [Example 2] Customizing graphs using `gopts()` and `scheme()`
 
-## [Example 2] Customizing graphs using `gopts()` 
+The default graph (from Example 1 using the `graph` option) produces a plot comparing **residualized ourcomes of treated and control units**:
 
-The default graph (from Example 1 using the `graph` option) produces a plot comparing **residualized ourcomes of treated and control units:
-
-![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex2.png)
+![](subfolder/ex2.png)
 
 You can __easily customize the graph__ through the `gopts()` option, which allows full customization of titles, axes, legends, and other graphical elements. For example:
 ```
-lwdid lcigsale, ivar(state) tvar(year) gvar(first_year) rolling(detrend) ///
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ///
       graph gopts(ytitle("Residualized average outcome") xtitle("Year") ///
-                  legend(pos(1) ring(0)) ///
-                  title("The Effects of California’s Tobacco Control Program"))
+      legend(pos(1) ring(0)) ///
+      title("The Effects of California’s Tobacco Control Program"))
 ```
 __This produces:__
 
-![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex3.png)
+![](subfolder/ex3.png)
 
 To generate a **black-and-white version** suitable for journal submissions, you can use the `scheme(s1mono)` option:
-![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex2.png)
 
+![](subfolder/ex4.png)
 
 <br>
 
@@ -210,22 +217,94 @@ lwdid lcigsale, ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri
 By default, it runs `rireps(1000)` replications and does __not__ set a random seed -- meaning that the computed RI p-value will vary slightly each time you run the command.
 
 
-The calculated RI p-value will be reported at __the end of the results__ (see below).
+The calculated RI p-value will be reported at __the end of the results__ (see below):
 
-![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex4.png)
-
+<div align="center">
+<img src="subfolder/ex5.png">
+</div>
 
 <br>
 
 If you want fully reproducible results, you can specify the seed using `riseed()`. Simillarly you can specify the number of replications using `rireps()`.
 
 ```
-lwdid lcigsale d,ivar(state) tvar(year) post(post) rolling(detrend) ri riseed(123) rireps(2000)
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(123) rireps(2000)
 ```
-This setup will generate __identical RI p-values__ each time the command is executed, with 2,000 randomization replications and a fixed seed of 123.
+This specification produces __identical RI p-values__ each time the command is executed, with 2,000 randomization replications and a fixed seed of 123.
 
 <br>
 
+# Large-N case
+
+First, load the dataset:
+```
+use lw_walmart, clear
+```
+> ⚠️ **Important:** For the large-N implementation, the `method()` option must be specified.  
+>> Available options: <br>
+>> `ra` (Regression Adjustment), `ipw` (Inverse Probability Weighting), `ipwra` (Doubly-robust IPWRA).
+
+<br>
+
+### [Example 1] Detrending transformation with the IPWRA estimator
+
+Then run:
+```
+lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year) ///
+rolling(detrend) method(ipwra) graph 
+```
+
+Here, `ivar(fips)` identifies states. the dataset includes __multiple treatment groups__, corresponding to a **staggered adoption setting**. If there is only a single treated group, `lwdid` automatically detects this and applies the common timing procedure.
+
+In this example, we use `rolling(detrend)` because the __parallel trends (PT)__ assumption appears to be violated, and apply the the doubly-robust estimator via `method(ipwra)`.
+
+This command produces the default graph plotting **weighted ATTs by relative time `r` (time to treatment)**:
+
+* `r = 0`: the immediate treatment effect
+* `r ≥ 1`: post-treatment (dynamic) effects
+* `r < 0`: pre-treatment periods
+
+<div align="center">
+<img src="subfolder/ex6.png">
+</div>
+
+<br>
+
+But, similarly, you can customize your graphs with `gopts` and `scheme` options: more over you can save the results, and apply your own graph stayle to plot the event-study graphs.
+
+<br>
+
+### [Example 2] Customizing graphs and saving results
+
+```stata
+lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year)  ///
+      rolling(detrend) method(ipwra) save(myresult) graph scheme(s1color) ///
+      gopts(ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart Opening"))  
+```
+In this example:
+
+* `gopts()` adds custom titles and axis labels.
+* `scheme(s1color)` changes the graph color scheme.
+> For a black-and-white version suitable for journal submissions, you can use `scheme(s1mono)`.
+
+<div align="center">
+<img src="subfolder/ex7.png">
+</div>
+
+The option `save(myresult)` also creates a new dataset `myresult.dta` in your working directory.
+This file contains:
+
+* weighted ATT estimates across relative time,
+* corresponding **standard errors** and **confidence intervals** (computed via wild bootstrap),
+* `N_cohort`: the number of treated cohorts used compute the estimates.
+* `N_units`: the total number of units included in the WATT estimation sample.
+
+<br>
+<div align="center">
+<img src="subfolder/ex8.png">
+</div>
+
+<br>
 
 ## Contact and Updates
 
@@ -233,12 +312,13 @@ The `lwdid` package has been updated to **version 2.0**, implementing the proced
 
 Minor updates related to graph plotting (particularly for **Small-N: Staggered adoption** cases) are planned for upcoming releases — please stay tuned.
 
-For questions or suggestions, feel free to reach out to the authors:
 
-**Soo Jeong Lee** ([soojeong.lee@siu.edu](mailto:soojeong.lee@siu.edu)) , Southern Illinois University Carbondale
+__For questions or suggestions, feel free to reach out to the authors:__
+
+**[Soo Jeong Lee](https://sites.google.com/view/sjlee-econ/home)** ([soojeong.lee@siu.edu](mailto:soojeong.lee@siu.edu)) , Southern Illinois University Carbondale
 
 **Jeffrey M. Wooldridge** ([wooldri1@msu.edu](mailto:wooldri1@msu.edu)), Michigan State University
 
-<br><br><br><br>
+<br><br><br><br> <br>
 
 
