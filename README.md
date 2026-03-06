@@ -8,42 +8,35 @@ A Stata package that implements the **Rolling Difference-in-Differences Estimato
 
 <br>
 
-## Citation
+# Citation
 
 If you use `lwdid` in your research, please cite the following papers:
 
-**Large-N Procedure**
+**Large-N Procedure**<br>
+
 Soo Jeong Lee, and Jeffrey M. Wooldridge (2025a),
 "_A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data,"
 Working Paper_, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
 > Revise and resubmit at *Journal of Business & Economic Statistics*.
 
-**Small-N Procedure**
+**Small-N Procedure** <br>
 Soo Jeong Lee, and Jeffrey M. Wooldridge (2025b),
 "_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
 Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
 > Under review
 
 
-
-# ⚠️ Development Version
-
-**Version 2 is currently under active development.**  
-The codebase is being updated and tested, and functionality may change.  
-Please do **not use this version yet** until the official release is announced.
-
-
-## Contents
+# Contents
 - [Citation](#citation)
 - [Installation](#installation)
 - [Syntax](#syntax)
-- [Examples: Large-N](#examples)
-- [Examples: Small-N](#examples)
+- [Examples: Large-N](#large-n-case)
+- [Examples: Small-N](#small-n-case)
 - [Contact and Updates](#contact-and-updates)
 
 <br>
 
-## Installation
+# Installation
 
 To install the latest version from GitHub, type the following command in Stata:
 
@@ -77,7 +70,7 @@ If installation from within Stata fails, the files can be downloaded manually fr
 
 <br>
 
-## Syntax
+# Syntax
 ```
 lwdid yvar [covariates], ivar(varname) tvar(varlist) gvar(varname) rolling(type)
           [method(estimator) small graph gopts(string) scheme(string)
@@ -90,9 +83,9 @@ To view the full syntax and option descriptions directly in Stata:
 help lwdid
 ```
 
-### Option Details 
+## Option Details 
 
-#### **Main Variables**
+### **Main Variables**
 
 | Argument | Description                |
 |--------------|----------------------------|
@@ -101,7 +94,7 @@ help lwdid
 
 ---
 
-#### **Required Options**
+### **Required Options**
 
 | Option | Description |
 |--------|--------------|
@@ -110,7 +103,7 @@ help lwdid
 | `gvar(varname)` | Treatment cohort variable (first treated period). Never‐treated units should be coded as 0.|
 | `rolling(type)` | Transformation type applied to residualize `yvar`. <br><br>**Available types:**<br>• `demean` – remove unit-specific pre-period mean <br>• `detrend` – remove unit-specific linear pre-trend <br>• `demeanq` – demeaning + deseasonalizing *(requires quarterly data)* <br>• `detrendq` – detrending + deseasonalizing *(requires quarterly data)* <br><br>**Note:** `demeanq` and `detrendq` require `tvar(year quarter)` format. |
 
-#### **Required Estimation Options (depends on implementation)**
+### **Required Estimation Options (depends on implementation)**
 | Option | Description |
 |--------|--------------|
 | `small` | **Small-N Only** <br> Requests the small-sample inference procedure designed for settings with few treated (or control) units (default: large-N inference).|
@@ -119,9 +112,9 @@ help lwdid
 ---
 
 
-### **Optional Options**
+## **Optional Options**
 
-#### Graph Options
+### Graph Options
 
 | Option | Description |
 |-------|-------------|
@@ -130,7 +123,7 @@ help lwdid
 | `scheme(string)` | Graph scheme (e.g., `scheme(s1mono)` for black-and-white figures suitable for publication)) |
 | `gid(#\|string)` |  **Available option for small-N:** <br> Displays the treated path for a specific unit instead of the average treated trajectory <br> For example, if Michigan and Illinois are treated states and the identifier for Illinois is 9, specifying `gid(9)` plots the treated path for Illinois only.|
 
-#### Other Options
+### Other Options
 
 | Option | Description |
 |------|-------------|
@@ -143,66 +136,72 @@ help lwdid
 
 <br>
 
-## Examples
-# Small-N (single treatment unit) case
+# Examples
+# Large-N case
+
+# Small-N case
 First, load the dataset:
 ```
 use smoking, clear
 ```
 
-<br>
-
-### [Example 1] Detrended transformation and graph
+## \[Example 1\] Detrended transformation and graph
 ```
 lwdid lcigsale, ivar(state) tvar(year) gvar(first_year) post(post) rolling(detrend) graph
 ```
-By selecting `rolling(detrend)`, the command performs a __unit-specific detrending tranformation__, allowing each unit to follow its own rend.
+By specifying `rolling(detrend)`, the command performs a __unit-specific detrending tranformation__, allowing each unit to follow its own heterogeneous linear trend and thereby relaxing the parallel trends (PT) assumption.
 
-You can easily change this to `demean`, or with year-quarter data, choose `demeanq` or `detrendq` to account for __seaonality__.
+Alternatively, you can use
 
-By default, `lwdid` reports both the __overall (single)__ treatment effect and the __period-by-period__ ATT estimates.
+```stata
+rolling(demean)
+```
 
+to remove **unit-specific means** (when PT assumption hold) instead of **unit-specific trends**.
+
+For year–quarter data, the options `rolling(demeanq)` or `rolling(detrendq)` can be used to account for __seaonality__. 
+
+To apply these transformations, the time variable must include __two identifiers__ in the form `tvar(year quarter)`.
+
+For example:
+```
+lwdid y, ivar(state) tvar(year q) gvar(first_year) rolling(detrendq) graph
+```
+This plots the residualized treated and control series over year-quarter time.
+
+
+By default, `lwdid` reports both:
+
+* the **overall (single) treatment effect**, and
+* **period-by-period ATT estimates**.
 
 <br>
 
 
-### [Example 2] Customizing graphs using `gopts()` 
+## [Example 2] Customizing graphs using `gopts()` 
 
-The default graph (from Example 1 using the `graph` option) produces a plot comparing residualized treated and control units outcomes:
+The default graph (from Example 1 using the `graph` option) produces a plot comparing **residualized ourcomes of treated and control units:
 
 ![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex2.png)
 
-You can __easily customize the graph__ through the `gopts()` option, allowing full customization of titles, axes, legends, and colors. For example:
+You can __easily customize the graph__ through the `gopts()` option, which allows full customization of titles, axes, legends, and other graphical elements. For example:
 ```
 lwdid lcigsale, ivar(state) tvar(year) gvar(first_year) rolling(detrend) ///
       graph gopts(ytitle("Residualized average outcome") xtitle("Year") ///
                   legend(pos(1) ring(0)) ///
                   title("The Effects of California’s Tobacco Control Program"))
-
 ```
 __This produces:__
 
 ![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex3.png)
 
+To generate a **black-and-white version** suitable for journal submissions, you can use the `scheme(s1mono)` option:
+![](https://raw.githubusercontent.com/Soo-econ/lwdid/main/subfolder/ex2.png)
+
 
 <br>
 
-### [Example 3] Year-quarter data
-
-As mentioned earlier, using `rolling(demeanq)` or `rolling(detrendq)` for quarterly data automatically remove __seaonal effects__, and seperately estimates treatment effects across year-quarter periods in the result table.
-
-To apply these transformations, the time variable must include __two identifiers__ in the form `tvar(year quarter)`.
-
-For example:
-
-```
-lwdid y, ivar(state) tvar(year quarter) gvar(first_year) rolling(detrendq) graph
-```
-This specification performs __a quarter-specific detrending transformation__ and plots the residualized treated and control series over year-quarter time.
-
-<br>
-
-### [Example 4] Randomization Inference (RI) p-values
+### [Example 3] Randomization Inference (RI) p-values
 
 When using the `ri` option, the command performs a manual randomization inference procedure.
 ```
