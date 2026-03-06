@@ -229,7 +229,7 @@ This setup will generate __identical RI p-values__ each time the command is exec
 
 ## Contact and Updates
 
-The `lwdid` package is now __largely updated__. The current version can replicate the main results reported in the accompanying paper.
+The `lwdid` package has been updated to **version 2.0**, implementing the procedures described in the accompanying papers and replicating their main results.
 
 Minor updates related to graph plotting (particularly for **Small-N: Staggered adoption** cases) are planned for upcoming releases — please stay tuned.
 
