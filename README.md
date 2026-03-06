@@ -157,7 +157,7 @@ Alternatively, you can use
 rolling(demean)
 ```
 
-to remove **unit-specific means** (when PT assumption hold) instead of **unit-specific trends**.
+to remove **unit-specific means** (when the PT assumption hold), instead of **unit-specific trends**.
 
 For year–quarter data, the options `rolling(demeanq)` or `rolling(detrendq)` can be used to account for __seaonality__. 
 
