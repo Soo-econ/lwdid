@@ -36,7 +36,7 @@ program define lwdid, eclass sortpreserve
 			 GRAPH                               ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
-			 SAVING(string)                      ///
+			 SAVE(string)                      ///
 			 GID(string)                         ///
 			 RI                                  ///
 			 RIREPS(integer 999)                ///
@@ -118,7 +118,7 @@ program define lwdid_small_single, eclass
 			 GRAPH                               ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
-			 SAVING(string)                      ///
+			 SAVE(string)                      ///
 			 TITLE(string)                       ///
 			 GID(string)                         ///
 			 RI                                  ///
@@ -514,7 +514,7 @@ program define lwdid_small_single, eclass
 
 			list period beta se ci_lw ci_up tstat pval N, noobs 
 
-			if "`saving'" != "" {
+			if "`save'" != "" {
 
 			qui keep period beta se ci_lw ci_up tstat pval N
 			qui rename beta att
@@ -524,7 +524,7 @@ program define lwdid_small_single, eclass
 			format att se ci_lw ci_up %9.0g
 			format tstat pval %9.0g
 
-			save "`saving'", replace
+			save "`save'", replace
 			qui rename att beta
 		}
 			
@@ -864,7 +864,7 @@ program define lwdid_small_staggered, eclass
 			 GRAPH                               ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
-			 SAVING(string)                      ///
+			 SAVE(string)                      ///
 			 GID(string)                         ///
 			 RI                                  ///
 			 RIREPS(integer 999)                ///
@@ -1018,7 +1018,7 @@ program define lwdid_large, eclass
          GRAPH                               ///
 		 SCHEME(string)						 ///
          GOPTS(string asis)                  ///
-         SAVING(string)                      ///
+         SAVE(string)                      ///
          TITLE(string)                       ///
          GID(string)                         ///
          RI                                  ///
@@ -1536,14 +1536,14 @@ program define lwdid_large, eclass
 
 
 		
-			if "`saving'" != "" {
+			if "`save'" != "" {
 					qui keep ryear watt se lower_ci upper_ci N_cohort N_units
 					qui order ryear watt se lower_ci upper_ci N_cohort N_units
 					
 					* reset display format before saving
 					format watt se lower_ci upper_ci %9.0g
 					
-					qui save "`saving'", replace
+					qui save "`save'", replace
 				}
 				
 		* --- graph
