@@ -55,7 +55,7 @@
 {synopt:{opt small}}{it:Small-N only.} Switches to the small-sample inference procedure (Lee & Wooldridge, 2025).{p_end}
 
 {syntab:Optional options}
-{synopt:{opt saving(filename)}}Save estimation results to disk (filename.dta).{p_end}
+{synopt:{opt save(filename)}}Save estimation results to disk (filename.dta).{p_end}
 
 {synopt:{opt graph}}Display graphical results.{break}
 Large-N: weighted ATT estimates by relative time.{break}
@@ -124,12 +124,12 @@ estimation procedure.
 
 {bf:Example 2:} Large-N estimation (IPWRA, detrend transformation)
 
-{space 4}{cmd:. lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) saving(mydata) graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
+{space 4}{cmd:. lwdid y x1 x2, ivar(id) tvar(year) gvar(first_treat) rolling(detrend) method(ipwra) save(myresult) graph gopts(ytitle("Residualized average outcome") xtitle("Year") title("The Effects of Walmart Opening"))}
 
 {pstd}
 This example estimates treatment effects using the IPWRA estimator with the
-detrend transformation. The option saving(mydata) saves the estimates to
-mydata.dta. The gopts() option customizes the graph.
+detrend transformation. The option save(myresult) saves the estimates to
+myresult.dta. The gopts() option customizes the graph.
 
 
 {bf:Example 3:} Small-N estimation (Quarterly data with detrending)
@@ -173,6 +173,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
