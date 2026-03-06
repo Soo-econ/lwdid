@@ -50,7 +50,11 @@
 {space 2}{bf:detrendq} remove pre-treatment trend and quarter effects (requires {cmd:tvar(year quarter)}){p_end}
 
 {syntab:Required (depends on implementation)}
-{synopt:{opt method(ra|ipw|ipwra)}}{it:Large-N only.} Estimation method for the large-N implementation. Required unless {cmd:small} is specified.{p_end}
+{synopt:{opt method(ra|ipw|ipwra)}}{it:Large-N only.} 
+Estimation method for the large-N implementation: 
+{cmd:ra} (regression adjustment), {cmd:ipw} (inverse probability weighting), 
+or {cmd:ipwra} (doubly robust IPW-RA). 
+Required unless {cmd:small} is specified.{p_end}
 
 {synopt:{opt small}}{it:Small-N only.} Switches to the small-sample inference procedure (Lee & Wooldridge, 2025).{p_end}
 
@@ -173,6 +177,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SS
     Jeffrey M. Wooldridge
     Michigan State University
     {browse "mailto:wooldri1@msu.edu":wooldri1@msu.edu}
+
 
 
 
