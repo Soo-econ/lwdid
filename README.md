@@ -142,7 +142,7 @@ This section illustrates basic usage of `lwdid` and shows how to replicate the m
 # Small-N case
 
 First, load the dataset:
-```
+```stata
 use lw_smoking, clear
 ```
 
@@ -155,6 +155,11 @@ use lw_smoking, clear
 lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) graph
 ```
 
+By default, `lwdid` reports both:
+
+* the **overall (single) treatment effect**, and
+* **period-by-period ATT estimates**.
+  
 Here, `gvar(first_year)` specifies the first treatment year for each unit (never-treated units should be coded as `0`).  
 In this example, only California is treated in 1989, so this is a **single-treatment case**. If multiple units are treated in different years, `lwdid` automatically detects this and applies the **small-N staggered adoption** procedure.
 
@@ -168,24 +173,39 @@ rolling(demean)
 
 to remove **unit-specific means** (when the PT assumption hold), instead of **unit-specific trends**.
 
+## \[Example 2\] Quarterly data 
+
 For year–quarter data, the options `rolling(demeanq)` or `rolling(detrendq)` can be used to account for __seaonality__. 
 
 To apply these transformations, the time variable must include __two identifiers__ in the form `tvar(year quarter)`.
 
 For example:
 ```
-lwdid y, ivar(state) tvar(year q) gvar(first_year) rolling(detrendq) graph
+lwdid y, ivar(state) tvar(year q) gvar(first_year_q) rolling(detrendq) graph
 ```
 This plots the residualized treated and control series over year-quarter time.
 
-By default, `lwdid` reports both:
+>  ⚠️ **Important:** When using quarterly time variables (`tvar(year q)`),
+the treatment timing variable in `gvar()` must be defined as __a Stata quarterly date__ (format `%tq`). <br? For example, if the treatment occurs in a specific quarter:
+```stata
+gen first_treat_q = yq(first_year, first_quarter)
+format first_treat_q %tq
+```
+Internally, the treatment indicator is constructed as 
+```stata
+post=(tvar(year q) >=gvar)
+```
+For example:
+| year  |q| gvar   | post |
+| ------|--- | ------ | ---- |
+| 2008 | 2 | 2008q3 | 0    |
+| 2008 | 3 | 2008q3 | 1    |
+| 2008 | 4 | 2008q3 | 1    |
 
-* the **overall (single) treatment effect**, and
-* **period-by-period ATT estimates**.
 
 <br>
 
-## [Example 2] Customizing graphs using `gopts()` and `scheme()`
+## [Example 3] Customizing graphs using `gopts()` and `scheme()`
 
 The default graph (from Example 1 using the `graph` option) produces a plot comparing **residualized ourcomes of treated and control units**:
 
@@ -208,7 +228,7 @@ To generate a **black-and-white version** suitable for journal submissions, you 
 
 <br>
 
-### [Example 3] Randomization Inference (RI) p-values
+### [Example 4] Randomization Inference (RI) p-values
 
 When using the `ri` option, the command performs a manual randomization inference procedure.
 ```
