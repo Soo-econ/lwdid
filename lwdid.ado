@@ -23,7 +23,7 @@ program define lwdid, eclass sortpreserve
 		version 16.0
 
 		syntax varlist(min=1 numeric) [if] [in], ///
-			IVAR(name) TVAR(name) GVAR(name)     ///
+			IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
 			ROLLING(name)                        ///
 			[METHOD(name)                        ///   
 			 Small                               ///    
@@ -105,7 +105,7 @@ program define lwdid_small_single, eclass
 		version 16.0
 
 		syntax varlist(min=1 numeric) [if] [in], ///
-			IVAR(name) TVAR(name) GVAR(name)     ///
+			IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
 			ROLLING(name)                        ///
 			[METHOD(name)                        ///   
 			 Small                               ///    
@@ -851,7 +851,7 @@ program define lwdid_small_staggered, eclass
 		version 16.0
 
 	 syntax varlist(min=1 numeric) [if] [in], ///
-			IVAR(name) TVAR(name) GVAR(name)     ///
+			IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
 			ROLLING(name)                        ///
 			[METHOD(name)                        ///   
 			 Small                               ///    
@@ -1005,7 +1005,7 @@ program define lwdid_large, eclass
     version 16.0
 
     syntax varlist(min=1 numeric) [if] [in], ///
-        IVAR(name) TVAR(name) GVAR(name)     ///
+        IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
         ROLLING(name)                        ///
         [METHOD(name)                        ///   
          Small                               ///    
