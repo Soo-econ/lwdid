@@ -48,6 +48,7 @@ program define lwdid, eclass sortpreserve
 		*-- parse varlist
 		local y    : word 1 of `varlist'
 		local xlist: list varlist - y       
+**# Bookmark #1
 
 		*-- rolling() check  (small-N adds demeanq/detrendq)
 		local rolling = lower("`rolling'")
@@ -105,7 +106,7 @@ program define lwdid_small_single, eclass
 		version 16.0
 
 		syntax varlist(min=1 numeric) [if] [in], ///
-			IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
+			IVAR(name) TVAR(varlist min=1 max=2)  GVAR(name)     ///
 			ROLLING(name)                        ///
 			[METHOD(name)                        ///   
 			 Small                               ///    
@@ -135,6 +136,9 @@ program define lwdid_small_single, eclass
 		local rolling = lower("`rolling'")
 		local method  = lower("`method'")
 		if "`method'" == "" local method "ra"
+		
+		local t1 : word 1 of `tvar'
+		local t2 : word 2 of `tvar'
 
 		*-- RI seed
 		qui capture confirm number `riseed'
@@ -142,7 +146,13 @@ program define lwdid_small_single, eclass
 		qui if missing(`riseed') local riseed = ceil(runiform()*1e6 + 1000*runiform())
 
 		*-- validate gvar
-		confirm variable `gvar' `tvar' `ivar' `y'
+		confirm variable `gvar'
+		confirm variable `ivar'
+		confirm variable `y'
+
+		confirm variable `t1'
+		if "`t2'" != "" confirm variable `t2'	
+
 		quietly replace `gvar' = 0 if missing(`gvar') & `touse'
 		capture assert `gvar' == floor(`gvar') if `touse' & `gvar' > 0
 		if _rc {
@@ -151,10 +161,16 @@ program define lwdid_small_single, eclass
 		}
 
 		*-- parse tvar
-		local t1 : word 1 of `tvar'
-		local t2 : word 2 of `tvar'
-		confirm variable `t1'
-		if "`t2'" != "" confirm variable `t2'
+		*-- build internal time variable (supports year or year-quarter)
+		tempvar __timevar
+		if "`t2'" == "" {
+			quietly gen long `__timevar' = `t1' if `touse'
+		}
+		else {
+			quietly gen double `__timevar' = yq(`t1', `t2') if `touse'
+			format `__timevar' %tq
+		}
+		local timevar `__timevar'
 
 		*-- ensure ivar is numeric (internal id) + keep original id for gid()
 		local id_orig `ivar'
@@ -186,7 +202,8 @@ program define lwdid_small_single, eclass
 		gen byte d_ = (`gvar' > 0)
 
 		* post indicator
-		gen byte `post_' = (`tvar' >= `gyear')
+		gen byte `post_' = (`timevar' >= `gyear') if `touse'
+		replace `post_' = . if !`touse'
 		di as txt "------------------------------------------------------------"
 		di as txt "gvar(): single cohort detected -> common timing"
 		di as txt "lwdid [small-N mode]  rolling=`rolling'  method=ols"
@@ -203,20 +220,15 @@ program define lwdid_small_single, eclass
 		qui drop if missing(`y', `id', `post_', d_)
 
 	* ---  (2) Build time index: yearly or year-quarter, plus nice tq label
-        capture drop `tq'
-        if "`t2'"=="" {
-            su `t1', meanonly
-            qui gen long `tindex' = `t1' - r(min) + 1
-            label var `tindex' "time index (year-based; min->1)"
-        }
-        else {
-            qui gen double `tq' = yq(`t1', `t2')
-            format `tq' %tq
-            su `tq', meanonly
-            qui gen long `tindex' = `tq' - r(min) + 1
-            label var `tindex' "time index (year-quarter; min->1)"
-        }
+		quietly su `timevar', meanonly
+		qui gen long `tindex' = `timevar' - r(min) + 1 if !missing(`timevar')
 
+		if "`t2'" == "" {
+			label var `tindex' "time index (year-based; min->1)"
+		}
+		else {
+			label var `tindex' "time index (year-quarter; min->1)"
+		}
 
     * ---  Identify K (max pre tindex) and first post period (tpost1)
         qui su `tindex' if `post_'==0, meanonly
@@ -441,14 +453,13 @@ program define lwdid_small_single, eclass
 		local Tmax = r(max)
 
 		forvalues tt = `tpost1'/`Tmax' {
-			if ("`t2'"=="") {
-				quietly su `t1' if `tindex'==`tt', meanonly
-				local lab : display %9.0f r(mean)
-			}
-			else {
-				quietly su `tq' if `tindex'==`tt', meanonly
-				local lab : display %tq r(mean)
-			}
+				quietly su `timevar' if `tindex'==`tt', meanonly
+				if "`t2'" == "" {
+					local lab : display %9.0f r(mean)
+				}
+				else {
+					local lab : display %tq r(mean)
+				}
 
 			capture {
 				if "`vce'" != "" {
@@ -884,7 +895,9 @@ program define lwdid_small_staggered, eclass
 		exit 198
 		}
 		
-		confirm variable `gvar' `tvar' `ivar' `y'
+		confirm variable `gvar' `ivar' `y'
+		confirm variable `t1'
+		if "`t2'" != "" confirm variable `t2'
 	
 		di as txt "gvar(): `n_cohort' cohorts detected -> Staggered adoption"
 		di as txt "lwdid [small-N mode] rolling=`rolling'"
@@ -1005,7 +1018,7 @@ program define lwdid_large, eclass
     version 16.0
 
     syntax varlist(min=1 numeric) [if] [in], ///
-        IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
+        IVAR(name) TVAR(varlist min=1 max=2)  GVAR(name)     ///
         ROLLING(name)                        ///
         [METHOD(name)                        ///   
          Small                               ///    
