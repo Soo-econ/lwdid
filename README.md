@@ -173,7 +173,7 @@ rolling(demean)
 
 to remove **unit-specific means** (when the PT assumption hold), instead of **unit-specific trends**.
 
-## \[Example 2\] Quarterly data 
+## \[Example 2\] Using Quarterly data 
 
 For year–quarter data, the options `rolling(demeanq)` or `rolling(detrendq)` can be used to account for __seaonality__. 
 
@@ -186,7 +186,9 @@ lwdid y, ivar(state) tvar(year q) gvar(first_year_q) rolling(detrendq) graph
 This plots the residualized treated and control series over year-quarter time.
 
 >  ⚠️ **Important:** When using quarterly time variables (`tvar(year q)`),
-the treatment timing variable in `gvar()` must be defined as __a Stata quarterly date__ (format `%tq`). <br? For example, if the treatment occurs in a specific quarter:
+the treatment timing variable in `gvar()` must be defined as __a Stata quarterly date__ (format `%tq`).
+
+For example, if the treatment occurs in a specific quarter:
 ```stata
 gen first_treat_q = yq(first_year, first_quarter)
 format first_treat_q %tq
