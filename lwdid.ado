@@ -6,7 +6,7 @@
 *! https://github.com/Soo-econ/lwdid.git  [Readme]
 
 set more off
-*set trace off
+set trace on
 
 capture program drop lwdid
 capture program drop lwdid_small_single
@@ -14,8 +14,6 @@ capture program drop lwdid_small_staggered
 capture program drop lwdid_large
 
 
-set trace on
-set tracedepth 1
 
 **# [1] MAIN PROGRAM: lwdid 
 ***>> Dispatches to the appropriate subroutine: lwdid_small_single/lwdid_small_staggered/lwdid_large
@@ -45,6 +43,15 @@ program define lwdid, eclass sortpreserve
 
 		marksample touse, novarlist
 
+		* allow missing gvar → convert to never-treated with 0
+		quietly replace `gvar' = 0 if missing(`gvar') & `touse'
+		
+		capture assert `gvar' == floor(`gvar') if `touse' & `gvar' > 0
+		if _rc {
+			di as err "gvar() must be integer-valued."
+			exit 198
+		}
+		
 		*-- parse varlist
 		local y    : word 1 of `varlist'
 		local xlist: list varlist - y       
@@ -153,12 +160,6 @@ program define lwdid_small_single, eclass
 		confirm variable `t1'
 		if "`t2'" != "" confirm variable `t2'	
 
-		quietly replace `gvar' = 0 if missing(`gvar') & `touse'
-		capture assert `gvar' == floor(`gvar') if `touse' & `gvar' > 0
-		if _rc {
-			di as err "gvar() must be integer-valued."
-			exit 198
-		}
 
 		*-- parse tvar
 		*-- build internal time variable (supports year or year-quarter)
@@ -856,161 +857,246 @@ program define lwdid_small_single, eclass
 end
 
 
-**# [3] lwdid_smll_staggered
-**>> Subroutine for the small-N staggered adopton (multiple treated units)
+**# [3] lwdid_small_staggered
+**>> Subroutine for the small-N staggered adoption (multiple treated units)
 program define lwdid_small_staggered, eclass
-		version 16.0
+    version 16.0
 
-	 syntax varlist(min=1 numeric) [if] [in], ///
-			IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
-			ROLLING(name)                        ///
-			[METHOD(name)                        ///   
-			 Small                               ///    
-			 REPS(integer 999)                   ///
-			 LEVEL(integer 95)                   ///
-			 CLUSTER(name)                       ///
-			 SEED(integer -1)                    ///
-			 VCE(string)                         ///
-			 TABLE(string)                       ///
-			 GRAPH                               ///
-			 SCHEME(string)						 ///
-			 GOPTS(string asis)                  ///
-			 SAVE(string)                      ///
-			 GID(string)                         ///
-			 RI                                  ///
-			 RIREPS(integer 999)                ///
-			 RISEED(string)                      ///
-			]
+    syntax varlist(min=1 numeric) [if] [in], ///
+        IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
+        ROLLING(name)                        ///
+        [METHOD(name)                        ///
+         Small                               ///
+         REPS(integer 999)                   ///
+         LEVEL(integer 95)                   ///
+         CLUSTER(name)                       ///
+         SEED(integer -1)                    ///
+         VCE(string)                         ///
+         TABLE(string)                       ///
+         GRAPH                               ///
+         SCHEME(string)                      ///
+         GOPTS(string asis)                  ///
+         SAVE(string)                        ///
+         GID(string)                         ///
+         RI                                  ///
+         RIREPS(integer 999)                 ///
+         RISEED(string)                      ///
+        ]
+
+    marksample touse, novarlist
+
+	
+		* --- ensure ivar is numeric (internal id)
+		local id_orig `ivar'
+
+		capture confirm numeric variable `ivar'
+		if _rc {
+			tempvar __id
+			quietly egen long `__id' = group(`ivar') if `touse'
+			local id `__id'
+		}
+		else {
+			local id `ivar'
+		}
 			
-		marksample touse, novarlist
-
+			
+		*-- parse tvar
+		local t1 : word 1 of `tvar'
+		local t2 : word 2 of `tvar'
+		
 		local y : word 1 of `varlist'
-		local xlist: list varlist - y
+		local xlist : list varlist - y
 		local rolling = lower("`rolling'")
 
-		
+		*-- controls not yet supported
 		if "`xlist'" != "" {
-		di as err "Controls are not yet supported for staggered treatment timing."
-		di as err "Please run lwdid without additional regressors."
-		exit 198
+			di as err "Controls are not yet supported for staggered treatment timing."
+			di as err "Please run lwdid without additional regressors."
+			exit 198
 		}
-		
-		confirm variable `gvar' `ivar' `y'
+
+
+		*-- validate variables
+		confirm variable `gvar'
+		confirm variable `ivar'
+		confirm variable `y'
 		confirm variable `t1'
 		if "`t2'" != "" confirm variable `t2'
-	
+
+		*-- build internal time variable (supports year or year-quarter)
+		tempvar timevar
+		if "`t2'" == "" {
+			quietly gen long `timevar' = `t1' if `touse'
+		}
+		else {
+			quietly gen double `timevar' = yq(`t1', `t2') if `touse'
+			format `timevar' %tq
+		}
+
+		*-- count cohorts for message
+		tempvar cohorttag
+		quietly egen `cohorttag' = tag(`gvar') if `gvar' > 0 & `touse'
+		quietly count if `cohorttag'
+		local n_cohort = r(N)
+
 		di as txt "gvar(): `n_cohort' cohorts detected -> Staggered adoption"
 		di as txt "lwdid [small-N mode] rolling=`rolling'"
-			
-		* --- Graph not yet implemented for small-N staggered
-			if "`graph'" != "" {
 
-				di as txt "------------------------------------------------------------"
-				di as err "graph option not yet supported for small-N staggered designs."
-				di as txt "This feature will be included in a future update of lwdid."
-				di as txt "Please run the command without the graph option."
-				di as txt "------------------------------------------------------------"
+		*-- graph not yet implemented
+		if "`graph'" != "" {
+			di as txt "------------------------------------------------------------"
+			di as err "graph option not yet supported for small-N staggered designs."
+			di as txt "This feature will be included in a future update of lwdid."
+			di as txt "Please run the command without the graph option."
+			di as txt "------------------------------------------------------------"
+			exit 198
+		}
 
-				exit 198
-			}
+  quietly {
+        capture drop d_
+        gen byte d_ = (`gvar' != 0) if `touse'
+        replace d_ = 0 if missing(d_)
+        label var d_ "ever-treated indicator"
+
+        preserve
+            keep if `touse'
+            drop if missing(`y', `ivar', `timevar')
+
 			
-quietly{
-			capture drop d_
-			gen byte d_ = (`gvar' != 0)
-			label var d_ "ever-treated indicator"
-			preserve
-				keep if `touse'
-				drop if missing(`y',`ivar',`tvar')
-				
-			* --- reproducibility setup ---
+			/* later
+			* --- reproducibility setup (only if RI requested) ---
+			if "`ri'" != "" {
 				quietly set rng mt64
+
+				capture confirm number `riseed'
+				if _rc | missing(real("`riseed'")) {
+					local riseed = ceil(runiform()*1e6 + 1000*runiform())
+				}
+
 				quietly set seed `riseed'
 				local reps = `rireps'
-
-
-			* --- cohort list
-				levelsof `gvar' if `gvar'>0, local(Glist)
-
-			* --- create cohort-specific residual outcomes
-			foreach g of local Glist {
-				tempvar yhat`g'
-				gen double `yhat`g'' = .
-				levelsof `ivar', local(IDlist)
-				foreach id of local IDlist {
-					if "`rolling'"=="demean" {
-						quietly regress `y' if `ivar'==`id' & `tvar'<`g'
-						predict double __fit if `ivar'==`id', xb
-					}
-					else if "`rolling'"=="detrend" {
-						quietly regress `y' c.`tvar' if `ivar'==`id' & `tvar'<`g'
-						predict double __fit if `ivar'==`id', xb
-					}
-					replace `yhat`g'' = __fit if `ivar'==`id'
-					cap drop __fit
-				}
-				gen double y`g'd = `y' - `yhat`g''
-				drop `yhat`g''
-				}
-
-			* --- treated post averages
-				foreach g of local Glist {
-
-					bysort `ivar': egen double ybar_temp_`g' = ///
-						mean(cond(`tvar'>=`g' & d_==1, y`g'd, .))
-
-				}
-
-			* --- cohort weights
-			tempvar gtemp
-			gen `gtemp'=`gvar'
-			replace `gtemp'=. if `gtemp'==0
-			tab `gtemp', matcell(freqs)
-			matrix w = freqs / r(N)
-
-			* --- control weighted averages
-			local i = 0
-			foreach g of local Glist {
-				local ++i
-				scalar w_g = w[`i',1]
-				bysort `ivar': egen double ybar_cont_`g' = ///
-					mean(cond(`tvar'>=`g' & d_==0, w_g*y`g'd, .))
 			}
-			
-		* ---   build ydot_bar (equation 7.18)
-			gen double ydot_bar = .
+			*/
 
+            *-- cohort list
+            levelsof `gvar' if `gvar' > 0, local(Glist)
+
+            *-- create cohort-specific residualized outcomes
+            foreach g of local Glist {
+                tempvar yhat
+                gen double `yhat' = .
+
+                levelsof `id', local(IDlist)
+
+                foreach idval of local IDlist {
+                    capture quietly {
+                        if "`rolling'" == "demean" {
+                            qui regress `y' if `id'==`idval' & `timevar' < `g'
+                        }
+                        else if "`rolling'" == "detrend" {
+                            qui regress `y' c.`timevar' if `id'==`idval' & `timevar' < `g'
+                        }
+                        else if "`rolling'" == "demeanq" {
+                            if "`t2'" == "" {
+                                di as err "rolling(demeanq) requires tvar(year quarter)."
+                                exit 198
+                            }
+                            regress `y' i.`t2' if `id'==`idval' & `timevar' < `g'
+                        }
+                        else if "`rolling'" == "detrendq" {
+                            if "`t2'" == "" {
+                                di as err "rolling(detrendq) requires tvar(year quarter)."
+                                exit 198
+                            }
+                            regress `y' c.`timevar' i.`t2' if `id'==`idval' & `timevar' < `g'
+                        }
+                        else {
+                            di as err "rolling() must be demean, detrend, demeanq, or detrendq"
+                            exit 198
+                        }
+                    }
+
+                    if _rc == 0 {
+                        predict double __fit if `id'==`idval', xb
+                        replace `yhat' = __fit if `id'==`idval'
+                        cap drop __fit
+                    }
+                    else {
+                        cap drop __fit
+                    }
+                }
+
+                gen double y`g'd = `y' - `yhat'
+                label var y`g'd "Residualized outcome cohort g=`g' (rolling=`rolling')"
+                drop `yhat'
+            }
+
+            *-- treated post averages
 			foreach g of local Glist {
-				replace ydot_bar = ybar_temp_`g' if `gvar'==`g'
-			}
-			gen double __contsum = 0
-			foreach g of local Glist {
-				replace __contsum = __contsum + ybar_cont_`g'
+				bysort `id': egen double ybar_temp_`g' = ///
+					mean(cond(`timevar' >= `g' & d_==1, y`g'd, .))
 			}
 
-			replace ydot_bar = __contsum if d_==0
-			drop __contsum
+            *-- cohort weights
+            tempvar gtemp
+            gen `gtemp' = `gvar'
+            replace `gtemp' = . if `gtemp' == 0
+            tab `gtemp', matcell(freqs)
+            matrix w = freqs / r(N)
 
-			* pick first post period (for simple regression)
-			quietly summarize `gvar' if `gvar'>0, meanonly
+            *-- control weighted averages
+            local i = 0
+            foreach g of local Glist {
+                local ++i
+                scalar w_g = w[`i',1]
+                bysort `id': egen double ybar_cont_`g' = ///
+                    mean(cond(`timevar' >= `g' & d_==0, w_g*y`g'd, .))
+            }
+
+            *-- build ydot_bar (equation 7.18)
+            gen double ydot_bar = .
+
+            foreach g of local Glist {
+                replace ydot_bar = ybar_temp_`g' if `gvar' == `g'
+            }
+
+            gen double __contsum = 0
+            foreach g of local Glist {
+                replace __contsum = __contsum + ybar_cont_`g'
+            }
+
+            qui replace ydot_bar = __contsum if d_==0
+            drop __contsum
+
+            *-- first treated cohort
+            summarize `gvar' if `gvar'>0, meanonly
 			local gmin = r(min)
-			
-} /// end quitely
 
-			di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
+			* first observed post-treatment period
+			summarize `timevar' if `timevar'>=`gmin', meanonly
+			local tpost1 = r(min)
 
-			regress ydot_bar d_ if `tvar'==`gmin'
-			matrix b = e(b)
-			matrix V = e(V)
+			qui regress ydot_bar d_ if `timevar'==`tpost1'
+    }
 
-			ereturn post b V
-			ereturn scalar att = _b[d_]
-			ereturn scalar se_att = _se[d_]
+    di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
 
-			di as res "lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
-					  "   SE = " %9.3f e(se_att)
+    regress ydot_bar d_ if `timevar' == `gmin'
+    matrix b = e(b)
+    matrix V = e(V)
+
+    ereturn post b V
+    ereturn scalar att = _b[d_]
+    ereturn scalar se_att = _se[d_]
+    ereturn local cmd     "lwdid"
+    ereturn local depvar  "`y'"
+    ereturn local rolling "`rolling'"
+
+    di as res "lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
+              "   SE = " %9.3f e(se_att)
+
     restore
 end
-
 
 **# [4] lwdid_large
 **>> Subroutine for the LARGE-N (Common&staggered)
