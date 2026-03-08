@@ -324,10 +324,6 @@ This file contains:
 * `N_cohort`: the number of treated cohorts used compute the estimates.
 * `N_units`: the total number of units included in the WATT estimation sample.
 
-<br>
-<div align="center">
-<img src="subfolder/ex8.png">
-</div>
 
 <br>
 
