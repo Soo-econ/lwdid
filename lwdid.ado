@@ -1228,7 +1228,7 @@ program define lwdid_large, eclass
 			}
 
 
-		* --- Stage 1: Residualized outcome y{g}d for each cohort
+* --- Stage 1: Residualized outcome y{g}d for each cohort
 		* >> using the reduced-form representation (computationally efficient)
 		
 				quietly {
@@ -1300,11 +1300,12 @@ program define lwdid_large, eclass
 			 } 
 			 
 	 
-		* --- Stage 2: ATT(g,t) point estimates + Influence Functions
+* --- Stage 2: ATT(g,t) point estimates + Influence Functions
 			quietly {
 					preserve
 					keep if `touse' & `gvar' > 0
-					bys `gvar': gen byte one = 1
+					keep if `touse' & `gvar' > 0
+					bys `gvar' `ivar': gen byte one = (_n==1)
 					bys `gvar': egen Ng = total(one)
 					keep `gvar' Ng
 					duplicates drop
@@ -1356,7 +1357,6 @@ program define lwdid_large, eclass
 				}
 
 		* --- Point estimation: ATT(g,t)
-				capture quietly {
 					if "`method'" == "ra" {
 						if "`xlist'" == "" {
 							qui regress `yvar' `dvar_g' if `touse' & f`t' & `cont'
@@ -1378,7 +1378,7 @@ program define lwdid_large, eclass
 						teffects psmatch (`yvar') (`dvar_g' `xlist') ///
 							if `touse' & f`t' & `cont', atet
 					}
-				}
+				
 				if _rc != 0 {
 					if inlist("`method'","ipw","ipwra") {
 						cap drop `p_hat_gt' `ipw_gt'
@@ -1394,7 +1394,7 @@ program define lwdid_large, eclass
 				post `pf' (`g') (`t') (`r') (`b_att')
 
 
-		* --- Influence function contribution (for wild bootstrap on WATT)
+* --- Influence function contribution (for wild bootstrap on WATT)
 				if inlist("`method'","ra","ipw","ipwra") {
 					tempvar esamp_gt mu0hat_gt IF_gt
 					qui gen byte `esamp_gt' = e(sample)
@@ -1412,16 +1412,23 @@ program define lwdid_large, eclass
 									- _b[c.`dvar_g'#c.`v'] * `dvar_g' * `v' if `esamp_gt'
 							}
 						}
-						qui gen double `IF_gt' = ///
-							(`dvar_g'/`mean_D') * (`yvar' - `mu0hat_gt' - `b_att') ///
-							if `esamp_gt'
+qui count if `esamp_gt'
+local n_eff_gt = r(N)
+qui gen double `IF_gt' = `b_att' / `n_eff_gt' if `esamp_gt'
+qui replace `IF_gt' = `IF_gt' + ///
+    (1 - `mean_D') / `mean_D' * (`yvar' - `mu0hat_gt' - `b_att') / `n_eff_gt' ///
+    if `esamp_gt' & `dvar_g' == 1
+qui replace `IF_gt' = `IF_gt' - (`yvar' - `mu0hat_gt') / `n_eff_gt' ///
+    if `esamp_gt' & `dvar_g' == 0
 					}
 					else if "`method'" == "ipw" {
 						* IPW IF: no mu0hat needed
+						qui count if `esamp_gt'
+						local n_eff_gt = r(N)
 						qui gen double `IF_gt' = ///
-							(`dvar_g'/`mean_D') * (`yvar' - `b_att') ///
-							- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar') ///
-							if `esamp_gt'
+							((`dvar_g'/`mean_D') * (`yvar' - `b_att') ///
+							- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar')) ///
+							/ `n_eff_gt' if `esamp_gt'
 					}
 					else if "`method'" == "ipwra" {
 						* IPWRA needs mu0hat (as in your existing implementation)
@@ -1433,10 +1440,12 @@ program define lwdid_large, eclass
 									- _b[c.`dvar_g'#c.`v'] * `dvar_g' * `v' if `esamp_gt'
 							}
 						}
+						qui count if `esamp_gt'
+						local n_eff_gt = r(N)
 						qui gen double `IF_gt' = ///
-							(`dvar_g'/`mean_D') * (`yvar' - `mu0hat_gt' - `b_att') ///
-							- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar' - `mu0hat_gt') ///
-							if `esamp_gt'
+							((`dvar_g'/`mean_D') * (`yvar' - `mu0hat_gt' - `b_att') ///
+							- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar' - `mu0hat_gt')) ///
+							/ `n_eff_gt' if `esamp_gt'
 					}
 
 					qui replace `IF_gt' = 0 if missing(`IF_gt')
@@ -1455,18 +1464,18 @@ program define lwdid_large, eclass
 					cap drop `mu0hat_gt'
 					drop `IF_gt'
 
-				if inlist("`method'","ipw","ipwra") cap drop `p_hat_gt' `ipw_gt'
-								}
-					else {
-						if inlist("`method'","ipw","ipwra") cap drop `p_hat_gt' `ipw_gt'
-					}
+					if inlist("`method'","ipw","ipwra") cap drop `p_hat_gt' `ipw_gt'
+				}
+				else {
+					if inlist("`method'","ipw","ipwra") cap drop `p_hat_gt' `ipw_gt'
 				}
 			}
+		}
 			postclose `pf'
 
 
 			
-		* --- Stage 2b: WATT(r) aggregation
+* --- Stage 2b: WATT(r) aggregation
 			quietly {
 			tempfile WATT_point WATT_weights
 			preserve
@@ -1532,7 +1541,7 @@ program define lwdid_large, eclass
 
 			
 			
-		* --- Stage 3: Wild Bootstrap for WATT(r)
+* --- Stage 3: Wild Bootstrap for WATT(r)
 
         if inlist("`method'","ra","ipw","ipwra") & `cell_count' > 0 {
             
@@ -1577,19 +1586,22 @@ program define lwdid_large, eclass
                         w_k = 0
                         for (m=1; m<=rows(Wmat); m++) {
                             if (Wmat[m,1]==r_val & Wmat[m,2]==g_k) {
-                                w_k = Wmat[m, 3]; break
+                                w_k = Wmat[m, 3]
+								break
                             }
                         }
                         IF_r[., rv] = IF_r[., rv] :+ w_k * IF_mat[., k]
                     }
                 }
+				
                 reps_m = `reps'
                 n_cl   = `n_clusters'
-                BS     = J(reps_m, n_vr, .)
+				
+                BS = J(reps_m, n_vr, .)
                 for (rep=1; rep<=reps_m; rep++) {
                     xi_cl = ((runiform(n_cl,1):>0.5) :- 0.5) * 2
                     xi_i  = xi_cl[cl_vec, .]
-                    BS[rep, .] = WATT_pmat[.,2]' :+ colsum(xi_i :* IF_r) :/ `n_units'
+                    BS[rep,.] = WATT_pmat[.,2]' :+ colsum(xi_i :* IF_r)
                 }
             }
 
@@ -1645,7 +1657,8 @@ program define lwdid_large, eclass
 					qui save "`save'", replace
 				}
 				
-		* --- graph
+* --- Graph
+
         if "`graph'" != "" {
                 if "`title'" == "" local title "lwdid: `method' (`rolling')"
                 local base_r = 0
@@ -1720,10 +1733,11 @@ program define lwdid_large, eclass
 			`gopts'
 						}
 					restore
-		 quietly{
-					*-- clean Mata
+					
+					
+				quietly {
 					mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS
 					mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m bs_sort n_bs lo_idx hi_idx
+				}
 		}
-				} 
 end
