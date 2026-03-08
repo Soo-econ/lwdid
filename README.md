@@ -304,7 +304,7 @@ But, similarly, you can customize your graphs with `gopts` and `scheme` options:
 ```stata
 lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year)  ///
       rolling(detrend) method(ipwra) save(myresult) graph scheme(s1color) ///
-      gopts(ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart Opening"))  
+      gopts(ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart opening on ln(Wholesale Emp)"))  
 ```
 In this example:
 
@@ -323,6 +323,11 @@ This file contains:
 * corresponding **standard errors** and **confidence intervals** (computed via wild bootstrap),
 * `N_cohort`: the number of treated cohorts used compute the estimates.
 * `N_units`: the total number of units included in the WATT estimation sample.
+
+<br>
+<div align="center">
+<img src="subfolder/ex8.png">
+</div>
 
 
 <br>
