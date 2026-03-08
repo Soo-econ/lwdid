@@ -6,6 +6,9 @@ A Stata package that implements the **Rolling Difference-in-Differences Estimato
 `lwdid` is a user-written Stata command freely available for academic and research use. 
 > A manuscript describing the `lwdid` method and software in detail is currently in preparation: <br> Soo Jeong Lee and Jeffrey M. Wooldridge (2025c), “*lwdid: Rolling Difference-in-Differences Estimation for Panel data,*” working paper.
 
+
+# ⚠️ **Important:** The package is currently being updated. Please do not run the code until this notice has been removed.
+
 <br>
 
 # Citation
