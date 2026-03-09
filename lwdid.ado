@@ -1396,31 +1396,55 @@ program define lwdid_large, eclass
 
 * --- Influence function contribution (for wild bootstrap on WATT)
 				if inlist("`method'","ra","ipw","ipwra") {
-					tempvar esamp_gt mu0hat_gt IF_gt
+					tempvar esamp_gt mu0hat_gt
 					qui gen byte `esamp_gt' = e(sample)
 
 					qui su `dvar_g' if `esamp_gt', meanonly
 					local mean_D = r(mean)
-
+					*exact IF 
 					if "`method'" == "ra" {
-						* RA needs mu0hat
-						qui predict double `mu0hat_gt' if `esamp_gt', xb
-						qui replace `mu0hat_gt' = `mu0hat_gt' - `b_att' * `dvar_g' if `esamp_gt'
-						if "`xlist'" != "" {
-							foreach v in `current_x_list' {
-								qui replace `mu0hat_gt' = `mu0hat_gt' ///
-									- _b[c.`dvar_g'#c.`v'] * `dvar_g' * `v' if `esamp_gt'
+
+							tempvar uhat IF_gt
+							qui gen double `IF_gt' = 0 if `touse'
+
+							* residual from RA regression
+							qui predict double `uhat' if e(sample), resid
+
+							* exact design matrix matching:
+							* reg yvar dvar_g xlist c.dvar_g#c.(current_x_list)
+
+							local zvars `dvar_g' `xlist'
+							local intvars
+
+							if "`xlist'" != "" {
+								foreach v in `current_x_list' {
+									tempvar int_`v'
+									qui gen double `int_`v'' = `dvar_g' * `v' if e(sample)
+									local intvars `intvars' `int_`v''
+								}
+								local zvars `zvars' `intvars'
 							}
+
+							* pass expanded names safely
+							local IFname   `IF_gt'
+							local ESname   `esamp_gt'
+							local Uname    `uhat'
+
+							* Mata objects built line-by-line
+							mata: es  = st_data(., "`ESname'")
+							mata: idx = selectindex(es :== 1)
+							mata: Z   = st_data(idx, tokens("`zvars'"))
+							mata: Z   = J(rows(Z),1,1), Z
+							mata: u   = st_data(idx, "`Uname'")
+							mata: ZZinv = invsym(quadcross(Z,Z))
+							mata: IFb   = (Z * ZZinv) :* u
+							mata: ifvec = J(rows(es),1,0)
+							mata: ifvec[idx] = IFb[,2]
+							mata: st_store(., "`IFname'", ifvec)
+
+							qui replace `IF_gt' = 0 if missing(`IF_gt')
 						}
-qui count if `esamp_gt'
-local n_eff_gt = r(N)
-qui gen double `IF_gt' = `b_att' / `n_eff_gt' if `esamp_gt'
-qui replace `IF_gt' = `IF_gt' + ///
-    (1 - `mean_D') / `mean_D' * (`yvar' - `mu0hat_gt' - `b_att') / `n_eff_gt' ///
-    if `esamp_gt' & `dvar_g' == 1
-qui replace `IF_gt' = `IF_gt' - (`yvar' - `mu0hat_gt') / `n_eff_gt' ///
-    if `esamp_gt' & `dvar_g' == 0
-					}
+					*working on it: for now, first-order plug-in influence contributions evaluated at the estimated nuisance parameters.
 					else if "`method'" == "ipw" {
 						* IPW IF: no mu0hat needed
 						qui count if `esamp_gt'
@@ -1597,11 +1621,14 @@ qui replace `IF_gt' = `IF_gt' - (`yvar' - `mu0hat_gt') / `n_eff_gt' ///
                 reps_m = `reps'
                 n_cl   = `n_clusters'
 				
-                BS = J(reps_m, n_vr, .)
-                for (rep=1; rep<=reps_m; rep++) {
-                    xi_cl = ((runiform(n_cl,1):>0.5) :- 0.5) * 2
-                    xi_i  = xi_cl[cl_vec, .]
-                    BS[rep,.] = WATT_pmat[.,2]' :+ colsum(xi_i :* IF_r)
+BS = J(reps_m, n_vr, .)
+
+for (rep=1; rep<=reps_m; rep++) {
+
+    xi_cl = ((runiform(n_cl,1):>0.5) :- 0.5) * 2
+    xi_i  = xi_cl[cl_vec]
+
+    BS[rep,.] = WATT_pmat[,2]' :+ colsum( IF_r :* xi_i )
                 }
             }
 
