@@ -7,7 +7,8 @@ A Stata package that implements the **Rolling Difference-in-Differences Estimato
 > A manuscript describing the `lwdid` method and software in detail is currently in preparation: <br> Soo Jeong Lee and Jeffrey M. Wooldridge (2025c), “*lwdid: Rolling Difference-in-Differences Estimation for Panel data,*” working paper.
 
 
-# ⚠️ **Important:** The package is currently being updated for Large-N case.
+# ⚠️ **Important:** The package is currently being updated for the Large-N setting.
+> The `method(ra)` implementation now uses an exact-Influence-function-based multiplier bootstrap.
 
 <br>
 
