@@ -1396,7 +1396,7 @@ program define lwdid_large, eclass
 
 * --- Influence function contribution (for wild bootstrap on WATT)
 				if inlist("`method'","ra","ipw","ipwra") {
-					tempvar esamp_gt mu0hat_gt
+					tempvar esamp_gt mu0hat_gt IF_gt
 					qui gen byte `esamp_gt' = e(sample)
 
 					qui su `dvar_g' if `esamp_gt', meanonly
