@@ -1404,7 +1404,7 @@ program define lwdid_large, eclass
 					*exact IF 
 					if "`method'" == "ra" {
 
-							tempvar uhat IF_gt
+							tempvar uhat
 							qui gen double `IF_gt' = 0 if `touse'
 
 							* residual from RA regression
