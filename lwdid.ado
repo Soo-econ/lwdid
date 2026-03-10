@@ -6,7 +6,8 @@
 *! https://github.com/Soo-econ/lwdid.git  [Readme]
 
 set more off
-set trace on
+*set trace on
+set trace off
 
 capture program drop lwdid
 capture program drop lwdid_small_single
@@ -1393,18 +1394,20 @@ program define lwdid_large, eclass
 				else                                     scalar `b_att' = _b[ATET:r1vs0.`dvar_g']
 				post `pf' (`g') (`t') (`r') (`b_att')
 
+				
 
-* --- Influence function contribution (for wild bootstrap on WATT)
+* --- Calculate  Influence function 
 				if inlist("`method'","ra","ipw","ipwra") {
+
 					tempvar esamp_gt mu0hat_gt IF_gt
 					qui gen byte `esamp_gt' = e(sample)
 
 					qui su `dvar_g' if `esamp_gt', meanonly
 					local mean_D = r(mean)
-					*exact IF 
+					
 					if "`method'" == "ra" {
 
-							tempvar uhat
+							tempvar uhat 
 							qui gen double `IF_gt' = 0 if `touse'
 
 							* residual from RA regression
@@ -1444,34 +1447,145 @@ program define lwdid_large, eclass
 
 							qui replace `IF_gt' = 0 if missing(`IF_gt')
 						}
-					*working on it: for now, first-order plug-in influence contributions evaluated at the estimated nuisance parameters.
-					else if "`method'" == "ipw" {
-						* IPW IF: no mu0hat needed
-						qui count if `esamp_gt'
-						local n_eff_gt = r(N)
-						qui gen double `IF_gt' = ///
-							((`dvar_g'/`mean_D') * (`yvar' - `b_att') ///
-							- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar')) ///
-							/ `n_eff_gt' if `esamp_gt'
-					}
-					else if "`method'" == "ipwra" {
-						* IPWRA needs mu0hat (as in your existing implementation)
-						qui predict double `mu0hat_gt' if `esamp_gt', xb
-						qui replace `mu0hat_gt' = `mu0hat_gt' - `b_att' * `dvar_g' if `esamp_gt'
-						if "`xlist'" != "" {
-							foreach v in `current_x_list' {
-								qui replace `mu0hat_gt' = `mu0hat_gt' ///
-									- _b[c.`dvar_g'#c.`v'] * `dvar_g' * `v' if `esamp_gt'
-							}
-						}
-						qui count if `esamp_gt'
-						local n_eff_gt = r(N)
-						qui gen double `IF_gt' = ///
-							((`dvar_g'/`mean_D') * (`yvar' - `mu0hat_gt' - `b_att') ///
-							- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar' - `mu0hat_gt')) ///
-							/ `n_eff_gt' if `esamp_gt'
-					}
+																
+						else if "`method'" == "ipw" {
 
+							* initialize IF
+							
+							qui gen double `IF_gt' = 0 if `touse'
+
+							qui count if `esamp_gt'
+							local n_eff_gt = r(N)
+
+							tempvar __plug
+							qui gen double `__plug' = ///
+								((`dvar_g'/`mean_D') * (`yvar' - `b_att') ///
+								- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar')) ///
+								if `esamp_gt'
+
+							local IFname `IF_gt'
+							local ESname `esamp_gt'
+							local Yname  `yvar'
+							local Dname  `dvar_g'
+							local Pname  `p_hat_gt'
+							local PLname `__plug'
+
+						* --- Mata block (step-by-step for stability)
+							mata: es  = st_data(., "`ESname'")
+							mata: idx = selectindex(es :== 1)
+
+							mata: y = st_data(idx, "`Yname'")
+							mata: d = st_data(idx, "`Dname'")
+							mata: p = st_data(idx, "`Pname'")
+							mata: plug = st_data(idx, "`PLname'")
+
+							mata: X = st_data(idx, tokens("`current_x_list'"))
+							mata: X = J(rows(X),1,1), X
+
+							* logit score IF
+							mata: W = p :* (1 :- p)
+							mata: A = quadcross(X, X :* W)
+							mata: Ainv = invsym(A)
+
+							mata: s = X :* (d :- p)
+							mata: IFg = s * Ainv
+
+							* Gamma term
+							mata: g = ((1 :- d) :* y :* p :/ (1 :- p))
+							mata: Gamma = mean(X :* g)'
+
+							mata: corr = IFg * Gamma
+
+							mata: ifvec = J(rows(es),1,0)
+							mata: ifvec[idx] = (plug :- corr) :/ `n_eff_gt'
+
+							mata: st_store(., "`IFname'", ifvec)
+
+							drop `__plug'
+						}
+						else if "`method'" == "ipwra" {
+
+							tempvar uhat IF_gt
+							qui gen double `IF_gt' = 0 if `touse'
+
+							* weighted OLS residual from the already estimated IPWRA regression
+							qui predict double `uhat' if e(sample), resid
+
+							*---------------------------------------------*
+							* Build design matrix exactly matching:
+							* reg y d x d#x_c [aw=ipw]
+							* Z = [1, D, X, D#Xc]
+							*---------------------------------------------*
+							local zvars `dvar_g' `xlist'
+							local intvars
+
+							if "`xlist'" != "" {
+								foreach v in `current_x_list' {
+									tempvar int_`v'
+									qui gen double `int_`v'' = `dvar_g' * `v' if e(sample)
+									local intvars `intvars' `int_`v''
+								}
+								local zvars `zvars' `intvars'
+							}
+
+							* names passed safely into Mata
+							local IFname `IF_gt'
+							local ESname `esamp_gt'
+							local Uname  `uhat'
+							local Wname  `ipw_gt'
+							local Pname  `p_hat_gt'
+							local Dname  `dvar_g'
+							local Zname  `zvars'
+							local Xps    `xlist'
+
+							*---------------------------------------------*
+							* Stacked-moment exact first-order IF:
+							*   [ weighted OLS moments/ logit score moments ]
+							*---------------------------------------------*
+							mata: es   = st_data(., "`ESname'")
+							mata: idx  = selectindex(es :== 1)
+
+							* design for weighted outcome regression
+							mata: Z    = st_data(idx, tokens("`Zname'"))
+							mata: Z    = J(rows(Z),1,1), Z
+
+							* design for propensity score model (logit includes constant)
+							mata: X    = st_data(idx, tokens("`Xps'"))
+							mata: X    = J(rows(X),1,1), X
+
+							mata: u    = st_data(idx, "`Uname'")
+							mata: w    = st_data(idx, "`Wname'")
+							mata: p    = st_data(idx, "`Pname'")
+							mata: d    = st_data(idx, "`Dname'")
+
+							* WLS block
+							mata: Qw    = quadcross(Z, Z :* w)
+							mata: Qwinv = invsym(Qw)
+							mata: M     = Z :* (w :* u)              // row i = w_i u_i Z_i
+
+							* logit score block
+							mata: A    = quadcross(X, X :* (p :* (1 :- p)))
+							mata: Ainv = invsym(A)
+							mata: S    = X :* (d :- p)               // row i = X_i (d_i - p_i)
+							mata: IFg  = S * Ainv
+
+							* cross-derivative wrt gamma:
+							* derivative of w_i z_i u_i wrt gamma only for controls
+							* because w_i = 1 for treated, p/(1-p) for controls
+							mata: H    = quadcross(Z :* ((1 :- d) :* w :* u), X)
+
+							* exact first-order IF for b:
+							* IFb_i = Qw^{-1} [ m_i + H IFg_i ]
+							mata: IFb  = (M + IFg * H') * Qwinv
+
+							* coefficient on D is column 2 (col 1 = constant)
+							mata: ifvec = J(rows(es),1,0)
+							mata: ifvec[idx] = IFb[,2]
+
+							mata: st_store(., "`IFname'", ifvec)
+
+							qui replace `IF_gt' = 0 if missing(`IF_gt')
+						}
 					qui replace `IF_gt' = 0 if missing(`IF_gt')
 
 					tempvar if_full
