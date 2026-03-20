@@ -196,7 +196,7 @@ format first_treat_q %tq
 When the detrendq option is used, both time variables must be specified in `tvar()`, namely `year` and `q`. 
 Internally, the command uses `tvar(year q)` together with `gvar(first_year)` to identify post-treatment periods. In effect, the post-treatment indicator is constructed as:
 ```stata
-post=(tvar(year q) >=first_year)
+post=(tvar(year q) >= gvar(first_year))
 ```
 For example:
 |id| year  |q| first_year   | post |
