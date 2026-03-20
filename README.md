@@ -200,7 +200,7 @@ post=(tvar(year q) >=gvar)
 ```
 For example:
 |id| year  |q| first_year   | post |
-|California| ------|--- | ------ | ---- |
+|----| ------|--- | ------ | ---- |
 |California| 2008 | 2 | 2008q3 | 0    |
 |California| 2008 | 3 | 2008q3 | 1    |
 |California| 2008 | 4 | 2008q3 | 1    |
