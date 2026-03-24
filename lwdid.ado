@@ -373,42 +373,8 @@ program define lwdid_small_single, eclass
 			local RHS ""
 		}
 
-
+	
 * --- Main regression & optional randomization inference
-
-		if "`ri'" != "" {
-		 * Running manually randomization inference (instead of RITEST) 
-		 * to ensure fully reproducible RI p-values
-
-			* --- reproducibility setup ---
-			quietly set rng mt64
-			quietly set seed `riseed'
-			local reps = `rireps'
-
-			* --- save a clean copy of the current dataset (avoid preserve conflict) ---
-			tempfile base
-			quietly save `base', replace
-
-			* --- baseline regression (observed effect) ---
-			quietly regress ydot_postavg d_ `RHS' if firstpost
-			scalar __b0 = _b[d_]
-
-			* --- permutation loop ---
-			tempname res
-			mat `res' = J(`reps', 1, .)
-
-			forvalues r = 1/`reps' {
-				quietly use `base', clear
-				gen double d_perm = d_[runiformint(1, _N)]   // permute treatment indicator
-				quietly regress ydot_postavg d_perm `RHS' if firstpost
-				mat `res'[`r', 1] = _b[d_perm]
-			}
-
-			* --- compute p-value ---
-			mata: st_matrix("abs_res", abs(st_matrix("`res'")))
-			mata: st_numscalar("__p_ri", mean(st_matrix("abs_res") :>= abs(st_numscalar("__b0"))))
-			ereturn scalar p_ri = __p_ri
-		}
 
 		* --- Main regression with/without vce() ---
 		if "`vce'" != "" {
@@ -429,6 +395,18 @@ program define lwdid_small_single, eclass
 					ctitle("`rolling' (OLS)") addstat(N, e(N))
 			}
 		}
+
+**# RI
+			
+		if "`ri'" != "" {
+    quietly set rng mt64
+    if "`riseed'" != "" quietly set seed `riseed'
+    local reps = `rireps'
+
+    scalar __b0 = _b[d_]
+    mata: st_numscalar("__p_ri", ///
+        lwdid_ri_inline(`reps', st_numscalar("__b0"), "`RHS'"))
+}
 
 		* keep these for e()
 		matrix `b' = e(b)
@@ -841,12 +819,13 @@ program define lwdid_small_single, eclass
         ereturn scalar se_att    = __se_overall
         ereturn scalar K         = `K'
         ereturn scalar tpost1    = `tpost1'
+		if "`ri'" != "" ereturn scalar p_ri = __p_ri
 		
 		di as res "Single ATT = " %9.3f e(att) "   SE = " %9.3f e(se_att)
 		
 		if "`ri'" != "" {
 				di as txt "-------------------------------------------"
-					di as res "Randomization inference (RI) p-value = " %9.3f __p_ri 
+					di as res "Randomization inference (RI) p-value = " %9.3f e(p_ri) 
 				di as txt "-------------------------------------------"
 		}
 
@@ -1684,65 +1663,80 @@ program define lwdid_large, eclass
         if inlist("`method'","ra","ipw","ipwra") & `cell_count' > 0 {
             
             qui if `seed' >= 0 set seed `seed'
-	quietly{
-				preserve
-				use "`WATT_point'", clear
-				if "`rolling'" == "demean"  drop if ryear == -1
-				if "`rolling'" == "detrend" drop if inlist(ryear,-1,-2)
-				qui drop if missing(watt)
-				sort ryear
-				mkmat ryear watt, matrix(WATT_pmat)
-				restore
-				mata: WATT_pmat = st_matrix("WATT_pmat")
+            quietly {
+                preserve
+                use "`WATT_point'", clear
+                if "`rolling'" == "demean"  drop if ryear == -1
+                if "`rolling'" == "detrend" drop if inlist(ryear,-1,-2)
+                qui drop if missing(watt)
+                sort ryear
+                mkmat ryear watt, matrix(WATT_pmat)
+                restore
+                mata: WATT_pmat = st_matrix("WATT_pmat")
 
-				preserve
-				use "`WATT_weights'", clear
-				mkmat ryear cohort weight, matrix(Wmat)
-				restore
-				mata: Wmat = st_matrix("Wmat")
-				tempvar cl_num unit_num
-				qui egen long `cl_num'   = group(`cluster_var') if `touse'
-				qui egen long `unit_num' = group(`ivar')        if `touse'
-				mata: cl_vec   = st_data(., "`cl_num'",   "`touse'")
-				mata: unit_vec = st_data(., "`unit_num'", "`touse'")
-				qui levelsof `cluster_var' if `touse', local(cl_vals)
-				local n_clusters : word count `cl_vals'
-				mata: st_numscalar("n_units_sc", max(unit_vec))
-				local n_units = n_units_sc
-	}
+                preserve
+                use "`WATT_weights'", clear
+                mkmat ryear cohort weight, matrix(Wmat)
+                restore
+                mata: Wmat = st_matrix("Wmat")
+
+                tempvar cl_num unit_num
+                qui egen long `cl_num'   = group(`cluster_var') if `touse'
+                qui egen long `unit_num' = group(`ivar')        if `touse'
+
+                mata: cl_vec   = st_data(., "`cl_num'",   "`touse'")
+                mata: unit_vec = st_data(., "`unit_num'", "`touse'")
+
+                qui levelsof `cluster_var' if `touse', local(cl_vals)
+                local n_clusters : word count `cl_vals'
+
+                mata: st_numscalar("n_units_sc", max(unit_vec))
+                local n_units = n_units_sc
+            }
+
             mata {
                 n_vr      = rows(WATT_pmat)
                 Nobs_m    = rows(IF_mat)
                 n_cells_m = cols(IF_mat)
+
+                // Build aggregated IF for each event time r
                 IF_r = J(Nobs_m, n_vr, 0)
+
                 for (rv=1; rv<=n_vr; rv++) {
                     r_val = WATT_pmat[rv, 1]
+
                     for (k=1; k<=n_cells_m; k++) {
                         g_k = cell_g[1, k]
                         t_k = cell_t[1, k]
+
                         if ((t_k - g_k) != r_val) continue
+
                         w_k = 0
                         for (m=1; m<=rows(Wmat); m++) {
-                            if (Wmat[m,1]==r_val & Wmat[m,2]==g_k) {
-                                w_k = Wmat[m, 3]
-								break
+                            if (Wmat[m,1] == r_val & Wmat[m,2] == g_k) {
+                                w_k = Wmat[m,3]
+                                break
                             }
                         }
+
                         IF_r[., rv] = IF_r[., rv] :+ w_k * IF_mat[., k]
                     }
                 }
-				
+
+                // Center the aggregated IF column by column
+                IF_r = IF_r :- J(rows(IF_r), 1, 1) * (colsum(IF_r) / rows(IF_r))
+
                 reps_m = `reps'
                 n_cl   = `n_clusters'
-				
-BS = J(reps_m, n_vr, .)
 
-for (rep=1; rep<=reps_m; rep++) {
+                // Star bootstrap draws: only the fluctuation part
+                BS_star = J(reps_m, n_vr, .)
 
-    xi_cl = ((runiform(n_cl,1):>0.5) :- 0.5) * 2
-    xi_i  = xi_cl[cl_vec]
+                for (rep=1; rep<=reps_m; rep++) {
+                    xi_cl = ((runiform(n_cl,1):>0.5) :- 0.5) * 2
+                    xi_i  = xi_cl[cl_vec]
 
-    BS[rep,.] = WATT_pmat[,2]' :+ colsum( IF_r :* xi_i )
+                    BS_star[rep,.] = colsum(IF_r :* xi_i)
                 }
             }
 
@@ -1754,49 +1748,55 @@ for (rep=1; rep<=reps_m; rep++) {
             mata: st_numscalar("n_vr_sc", n_vr_sc)
             local n_vr = n_vr_sc
 
-            quietly forval col = 1/`n_vr' {
-                mata: st_numscalar("rv_sc",    WATT_pmat[`col', 1])
-                mata: st_numscalar("bs_se_sc", sqrt(variance(BS[., `col'])))
-                mata: bs_sort = sort(BS[., `col'], 1)
-                mata: n_bs = rows(bs_sort)
-                mata: lo_idx = max((1, floor(n_bs * `lo_pct'/100)))
-                mata: hi_idx = min((n_bs, ceil(n_bs * `hi_pct'/100)))
-                mata: st_numscalar("bs_lo_sc", bs_sort[lo_idx])
-                mata: st_numscalar("bs_hi_sc", bs_sort[hi_idx])
-                local rv_`col'    = rv_sc
-                local se_`col'    = bs_se_sc
-                local lo_ci_`col' = bs_lo_sc
-                local hi_ci_`col' = bs_hi_sc
-            }
+quietly forval col = 1/`n_vr' {
+    mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
+    mata: st_numscalar("theta_sc", WATT_pmat[`col', 2])
+    mata: st_numscalar("se_sc", sqrt(variance(BS_star[., `col'])))
+
+    mata: bs_sort = sort(BS_star[., `col'], 1)
+    mata: n_bs = rows(bs_sort)
+    mata: lo_idx = max((1, floor(n_bs * `lo_pct' / 100)))
+    mata: hi_idx = min((n_bs, ceil(n_bs * `hi_pct' / 100)))
+
+	mata: st_numscalar("q_lo_sc", bs_sort[lo_idx,1])
+	mata: st_numscalar("q_hi_sc", bs_sort[hi_idx,1])
+
+    mata: st_numscalar("lo_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_hi_sc"))
+    mata: st_numscalar("hi_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_lo_sc"))
+
+    local rv_`col'    = rv_sc
+    local se_`col'    = se_sc
+    local lo_ci_`col' = lo_ci_sc
+    local hi_ci_`col' = hi_ci_sc
+}
 
             preserve
             qui use "`WATT_point'", clear
-            qui gen double se       = 0
-            qui gen double lower_ci = 0
-            qui gen double upper_ci = 0
+            qui gen double se       = .
+            qui gen double lower_ci = .
+            qui gen double upper_ci = .
+
             quietly forval col = 1/`n_vr' {
                 qui replace se       = `se_`col''    if ryear == `rv_`col''
                 qui replace lower_ci = `lo_ci_`col'' if ryear == `rv_`col''
                 qui replace upper_ci = `hi_ci_`col'' if ryear == `rv_`col''
             }
+
             sort ryear
             
-			format watt se lower_ci upper_ci %9.3f
-			di as txt "-> WATT(r) with Wild Bootstrap `level'% CI  (reps=`reps')"
-			di as txt "------------------------------------------------------------"
+            format watt se lower_ci upper_ci %9.3f
+            di as txt "-> WATT(r) with Wild Bootstrap `level'% CI  (star bootstrap, reps=`reps')"
+            di as txt "------------------------------------------------------------"
             list ryear watt se lower_ci upper_ci N_cohort N_units, noobs
 
-
-		
-			if "`save'" != "" {
-					qui keep ryear watt se lower_ci upper_ci N_cohort N_units
-					qui order ryear watt se lower_ci upper_ci N_cohort N_units
-					
-					* reset display format before saving
-					format watt se lower_ci upper_ci %9.0g
-					
-					qui save "`save'", replace
-				}
+            if "`save'" != "" {
+                qui keep ryear watt se lower_ci upper_ci N_cohort N_units
+                qui order ryear watt se lower_ci upper_ci N_cohort N_units
+                
+                * reset display format before saving
+                format watt se lower_ci upper_ci %9.0g
+                qui save "`save'", replace
+            }
 				
 * --- Graph
 
@@ -1877,8 +1877,61 @@ for (rep=1; rep<=reps_m; rep++) {
 					
 					
 				quietly {
-					mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS
+					mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star
 					mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m bs_sort n_bs lo_idx hi_idx
 				}
 		}
 end
+
+
+**# RI
+capture mata: mata drop lwdid_ri_inline()
+
+mata:
+real scalar lwdid_ri_inline(
+    real scalar reps,
+    real scalar b0,
+    string scalar rhs
+)
+{
+    real colvector fp, Y, D, Dp, res
+    real matrix X, Z, bhat
+    real scalar n_fp, r, i, j, tmp
+    string rowvector xvars
+
+    fp   = selectindex(st_data(., "firstpost") :== 1)
+    n_fp = rows(fp)
+
+    Y = st_data(fp, "ydot_postavg")
+    D = st_data(fp, "d_")
+
+    xvars = tokens(rhs)
+    if (length(xvars) > 0) {
+        X = J(n_fp,1,1), st_data(fp, xvars)
+    }
+    else {
+        X = J(n_fp,1,1)
+    }
+
+    res = J(reps,1,.)
+
+    for (r = 1; r <= reps; r++) {
+        Dp = D
+
+        for (i = n_fp; i >= 2; i--) {
+            j     = ceil(i * runiform(1,1))
+            tmp   = Dp[i]
+            Dp[i] = Dp[j]
+            Dp[j] = tmp
+        }
+
+        Z    = X, Dp
+        bhat = invsym(quadcross(Z,Z)) * quadcross(Z,Y)
+        res[r] = bhat[rows(bhat),1]
+    }
+
+    return( (sum(abs(res) :>= abs(b0)) + 1) / (rows(res) + 1) )
+}
+end
+
+
