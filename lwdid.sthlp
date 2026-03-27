@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.0 04MAR2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
+{* *! version 2.1 27MAR2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
 {viewerjumpto "Syntax" "lwdid##syntax"}{...}
 {viewerjumpto "Description" "lwdid##description"}{...}
 {viewerjumpto "Options" "lwdid##options"}{...}
@@ -11,8 +11,9 @@
 {title:Title}
 
 {p2colset 5 20 22 2}{...}
-{p2col :{bf:lwdid} {hline 2}}Transformation-based rolling DID estimator (Lee & Wooldridge, 2023, 2025){p_end}
+{p2col :{bf:lwdid} {hline 2}}Transformation-based rolling DID estimator (Lee & Wooldridge, 2025, 2026){p_end}
 {p2colreset}{...}
+
 
 
 {marker syntax}{...}
@@ -21,7 +22,7 @@
 {p 8 16 2}
 {cmd:lwdid} {it:varlist} [{it:if}] [{it:in}],
 {cmd:ivar(}{it:varname}{cmd:)}
-{cmd:tvar(}{it:varlist}{cmd:)}
+{cmd:tvar(}{it:varname}{cmd:)}
 {cmd:gvar(}{it:varname}{cmd:)}
 {cmd:rolling(}{it:type}{cmd:)}
 [{it:options}]
@@ -39,15 +40,17 @@
 {syntab:Required options}
 {synopt:{opt ivar(varname)}}Panel identifier (numeric or string).{p_end}
 
-{synopt:{opt tvar(varlist)}}Time variable(s): {it:year} or {it:year quarter}. Quarterly specification is supported when {cmd:small} is used.{p_end}
+{synopt:{opt tvar(varname)}}Time variable, supplied as a single numeric time index. For seasonal adjustment, see {cmd:rolling()}.{p_end}
 
-{synopt:{opt gvar(varname)}}Treatment cohort variable (first treated period). Never-treated units should be coded as 0.{p_end}
+{synopt:{opt gvar(varname)}}Treatment cohort variable (first treated period). Never-treated units should be coded as 0. {cmd:gvar()} must be measured on the same scale as {cmd:tvar()}.{p_end}
 
 {synopt:{opt rolling(type)}}Outcome transformation applied to {it:yvar}:{break}
-{space 2}{bf:demean}   removes pre-treatment mean{break}
-{space 2}{bf:detrend}  removes pre-treatment linear trend{break}
-{space 2}{bf:demeanq}  removes pre-treatment mean and quarter effects (requires {cmd:tvar(year quarter)}){break}
-{space 2}{bf:detrendq} remove pre-treatment trend and quarter effects (requires {cmd:tvar(year quarter)}){p_end}
+{space 2}{bf:demean}   pre-treatment mean{break}
+{space 2}{bf:detrend}  pre-treatment linear trend{break}
+{space 2}{bf:demeanq}  pre-treatment mean + quarter-of-year effects{break}
+{space 2}{bf:detrendq} pre-treatment trend + quarter-of-year effects{break}
+{space 2}{bf:demeanm}  pre-treatment mean + month-of-year effects{break}
+{space 2}{bf:detrendm} pre-treatment trend + month-of-year effects{p_end}
 
 {syntab:Required (depends on implementation)}
 {synopt:{opt method(ra|ipw|ipwra)}}{it:Large-N only.} 
@@ -56,7 +59,7 @@ Estimation method for the large-N implementation:
 or {cmd:ipwra} (doubly robust IPW-RA). 
 Required unless {cmd:small} is specified.{p_end}
 
-{synopt:{opt small}}{it:Small-N only.} Switches to the small-sample inference procedure (Lee & Wooldridge, 2025).{p_end}
+{synopt:{opt small}}{it:Small-N only.} Switches to the small-sample inference procedure (Lee & Wooldridge, 2026).{p_end}
 
 {syntab:Optional options}
 {synopt:{opt save(filename)}}Save estimation results to disk (filename.dta).{p_end}
@@ -86,7 +89,7 @@ Small-N: treated vs. control means of residualized outcomes over time.{p_end}
 
 {pstd}
 {cmd:lwdid} implements the transformation-based rolling Difference-in-Differences estimators 
-developed in Lee and Wooldridge (2023, 2025). 
+developed in Lee and Wooldridge (2025, 2026). 
 The command provides a unified implementation for panel data settings with either 
 a {it:large-N} or a {it:small-N} cross-sectional dimension, allowing treatment effects
 to be estimated under both the staggered treatment adoption and the common timing case. 
@@ -100,7 +103,7 @@ facilitating both overall and period-specific ATT estimation.
 
 {pstd}
 By default, {cmd:lwdid} implements the transformation-based Difference-in-Differences
-approach proposed in Lee and Wooldridge (2023). This approach is designed for
+approach proposed in Lee and Wooldridge (2025). This approach is designed for
 panels with a large cross-sectional dimension and allows for heterogeneous treatment effects 
 and unit-specific heterogeneous linear trends.
 
@@ -108,7 +111,9 @@ and unit-specific heterogeneous linear trends.
 When the cross-sectional dimension is small ({it:small-N}), conventional
 large-N asymptotic approximations may be unreliable. In such cases, specifying
 the {cmd:small} option applies the exact small-sample inference procedures
-developed in Lee and Wooldridge (2025).
+developed in Lee and Wooldridge (2026). The seasonal-adjustment options
+{cmd:demeanq}, {cmd:detrendq}, {cmd:demeanm}, and {cmd:detrendm} are currently
+implemented only in this small-N case.
 
 {pstd}
 A convenient feature of {cmd:lwdid} is that, based on the treatment cohort
@@ -136,21 +141,41 @@ detrend transformation. The option save(myresult) saves the estimates to
 myresult.dta. The gopts() option customizes the graph.
 
 
-{bf:Example 3:} Small-N estimation (Quarterly data with detrending)
+{bf:Example 3:} Small-N estimation (Quarterly data with detrending and seasonal adjustment)
 
-{space 4}{cmd:. lwdid y, small ivar(id) tvar(year quarter) gvar(first_treat) rolling(detrendq) graph}
+{space 4}{cmd:. gen qdate = yq(year, quarter)}
+{space 4}{cmd:. format qdate %tq}
+{space 4}{cmd:. gen gq = yq(first_year, first_quarter)}
+{space 4}{cmd:. format gq %tq}
+{space 4}{cmd:. lwdid y, small ivar(id) tvar(qdate) gvar(gq) rolling(detrendq) graph}
 
 {pstd}
 With the {cmd:small} option, {cmd:lwdid} implements the small-N inference
 procedure. Here the example uses quarterly data with the {cmd:detrendq}
-transformation. When {cmd:detrendq} is used, the time variable must be
-specified as {cmd:tvar(year quarter)}.
+transformation. For quarterly seasonal adjustment, {cmd:tvar()} should be
+a single Stata quarterly date variable created by {cmd:yq()}, and {cmd:gvar()}
+should be on the same scale.
+
+{bf:Example 4:} Small-N estimation (Monthly data with detrending and seasonal adjustment)
+
+{space 4}{cmd:. gen mdate = ym(year, month)}
+{space 4}{cmd:. format mdate %tm}
+{space 4}{cmd:. gen gm = ym(first_year, first_month)}
+{space 4}{cmd:. format gm %tm}
+{space 4}{cmd:. lwdid y, small ivar(id) tvar(mdate) gvar(gm) rolling(detrendm) graph}
 
 {pstd}
-Based on the treatment cohort variable {cmd:gvar(first_treat)}, {cmd:lwdid}
+This example uses monthly data with the {cmd:detrendm} transformation. For
+monthly seasonal adjustment, {cmd:tvar()} should be a single Stata monthly
+date variable created by {cmd:ym()}, and {cmd:gvar()} should be on the same
+scale.
+
+{pstd}
+Based on the treatment cohort variable specified in {cmd:gvar()}, {cmd:lwdid}
 automatically detects whether the design involves a single treatment cohort
 (common timing) or multiple cohorts (staggered adoption), and applies the
-corresponding estimation procedure described in Lee and Wooldridge (2025).
+corresponding estimation procedure described in Lee and Wooldridge (2026).
+
 
 
 
@@ -159,13 +184,14 @@ corresponding estimation procedure described in Lee and Wooldridge (2025).
 
 {pstd}
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2025), 
+"A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data," 
+Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SSSRN 4516518}.
+
+{pstd}
+Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026), 
 "Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"  
 Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.5325686":SSRN 5325686}
 
-{pstd}
-Lee, Soo Jeong, and Jeffrey M. Wooldridge (2023), 
-"A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data," 
-Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SSSRN 4516518}.
 
 {marker author}{...}
 {title:Authors}
