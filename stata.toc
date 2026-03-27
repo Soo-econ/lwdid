@@ -1,4 +1,4 @@
-v 2.0
+v 2.1
 d lwdid: Rolling Difference-in-Differences estimators
-d Lee and Wooldridge (2023, 2025)
+d Lee and Wooldridge (2025, 2026)
 p lwdid
