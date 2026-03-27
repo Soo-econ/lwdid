@@ -71,8 +71,8 @@ net get lwdid, replace
 
 Alternatively, you can install and download everything directly from GitHub in one step: 
 ```
-net install lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/)
-net get lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/)
+net install lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/) replace
+net get lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/) replace
 ```
 If installation from within Stata fails, the files can be downloaded manually from [my GitHub page](https://github.com/Soo-econ/lwdid.git)
 
