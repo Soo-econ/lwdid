@@ -1,6 +1,6 @@
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.0 March 2026
+*! version 2.1 March 27 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 *! https://github.com/Soo-econ/lwdid.git  [Readme]
@@ -22,7 +22,7 @@ program define lwdid, eclass sortpreserve
 		version 16.0
 
 		syntax varlist(min=1 numeric) [if] [in], ///
-			IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
+			IVAR(name) TVAR(name) GVAR(name)     ///
 			ROLLING(name)                        ///
 			[METHOD(name)                        ///   
 			 Small                               ///    
@@ -56,19 +56,19 @@ program define lwdid, eclass sortpreserve
 		*-- parse varlist
 		local y    : word 1 of `varlist'
 		local xlist: list varlist - y       
-**# Bookmark #1
+
 
 		*-- rolling() check  (small-N adds demeanq/detrendq)
 		local rolling = lower("`rolling'")
 		if "`small'" != "" {
-			local ok = inlist("`rolling'","demean","detrend","demeanq","detrendq")
+			local ok = inlist("`rolling'","demean","detrend","demeanq","detrendq","demeanm","detrendm")
 		}
 		else {
 			local ok = inlist("`rolling'","demean","detrend")
 		}
 		if !`ok' {
 			if "`small'" != "" {
-				di as err "rolling() must be: demean | detrend | demeanq | detrendq"
+				di as err "rolling() must be: demean | detrend | demeanq | detrendq | demeanm | detrendm"
 			}
 			else {
 				di as err "rolling() must be: demean | detrend  (large-N mode)"
@@ -114,7 +114,7 @@ program define lwdid_small_single, eclass
 		version 16.0
 
 		syntax varlist(min=1 numeric) [if] [in], ///
-			IVAR(name) TVAR(varlist min=1 max=2)  GVAR(name)     ///
+			IVAR(name) TVAR(name)  GVAR(name)     ///
 			ROLLING(name)                        ///
 			[METHOD(name)                        ///   
 			 Small                               ///    
@@ -145,34 +145,53 @@ program define lwdid_small_single, eclass
 		local method  = lower("`method'")
 		if "`method'" == "" local method "ra"
 		
-		local t1 : word 1 of `tvar'
-		local t2 : word 2 of `tvar'
-
 		*-- RI seed
 		qui capture confirm number `riseed'
 		qui if _rc local riseed = .
 		qui if missing(`riseed') local riseed = ceil(runiform()*1e6 + 1000*runiform())
 
-		*-- validate gvar
+		*-- validate variables
 		confirm variable `gvar'
 		confirm variable `ivar'
 		confirm variable `y'
-
-		confirm variable `t1'
-		if "`t2'" != "" confirm variable `t2'	
-
-
-		*-- parse tvar
-		*-- build internal time variable (supports year or year-quarter)
-		tempvar __timevar
-		if "`t2'" == "" {
-			quietly gen long `__timevar' = `t1' if `touse'
+		confirm variable `tvar'
+		capture confirm numeric variable `tvar'
+		if _rc {
+			di as err "tvar() must be a single numeric time variable."
+			exit 198
 		}
-		else {
-			quietly gen double `__timevar' = yq(`t1', `t2') if `touse'
-			format `__timevar' %tq
-		}
+
+		*-- build internal time variable (single numeric index supplied in tvar())
+		tempvar __timevar __qvar __mvar
+		quietly gen double `__timevar' = `tvar' if `touse'
 		local timevar `__timevar'
+		local __tfmt : format `tvar'
+		local __gfmt : format `gvar'
+
+		if inlist("`rolling'","demeanq","detrendq") {
+			quietly gen byte `__qvar' = quarter(dofq(`timevar')) if `touse'
+			quietly count if `touse' & missing(`__qvar')
+			if r(N) > 0 {
+				di as err "rolling(`rolling') requires tvar() to be a Stata quarterly date variable created by yq()."
+				exit 198
+			}
+			if strpos("`__gfmt'","%tq")==0 {
+				di as err "rolling(`rolling') requires gvar() to be on the same quarterly scale as tvar() (format %tq, created by yq())."
+				exit 198
+			}
+		}
+		if inlist("`rolling'","demeanm","detrendm") {
+			quietly gen byte `__mvar' = month(dofm(`timevar')) if `touse'
+			quietly count if `touse' & missing(`__mvar')
+			if r(N) > 0 {
+				di as err "rolling(`rolling') requires tvar() to be a Stata monthly date variable created by ym()."
+				exit 198
+			}
+			if strpos("`__gfmt'","%tm")==0 {
+				di as err "rolling(`rolling') requires gvar() to be on the same monthly scale as tvar() (format %tm, created by ym())."
+				exit 198
+			}
+		}
 
 		*-- ensure ivar is numeric (internal id) + keep original id for gid()
 		local id_orig `ivar'
@@ -214,7 +233,7 @@ program define lwdid_small_single, eclass
 
 
 	* --- Keep analysis sample & create core flags
-		tempvar tindex tq yhat ydot cs ctrlSum ydot_tr
+		tempvar tindex yhat ydot cs ctrlSum ydot_tr
 		tempname b V
 		
 		preserve
@@ -225,12 +244,7 @@ program define lwdid_small_single, eclass
 		quietly su `timevar', meanonly
 		qui gen long `tindex' = `timevar' - r(min) + 1 if !missing(`timevar')
 
-		if "`t2'" == "" {
-			label var `tindex' "time index (year-based; min->1)"
-		}
-		else {
-			label var `tindex' "time index (year-quarter; min->1)"
-		}
+		label var `tindex' "time index (min->1)"
 
     * ---  Identify K (max pre tindex) and first post period (tpost1)
         qui su `tindex' if `post_'==0, meanonly
@@ -262,19 +276,19 @@ program define lwdid_small_single, eclass
                 predict double __fit if `id'==`ii', xb
             }
             else if "`rolling'"=="demeanq" {
-                if "`t2'"=="" {
-                    di as err "rolling(demeanq) requires tvar(year quarter)."
-                    exit 198
-                }
-                regress `y' i.`t2' if `id'==`ii' & `post_'==0
+                regress `y' i.`__qvar' if `id'==`ii' & `post_'==0
                 predict double __fit if `id'==`ii', xb
             }
             else if "`rolling'"=="detrendq" {
-                if "`t2'"=="" {
-                    di as err "rolling(detrendq) requires tvar(year quarter)."
-                    exit 198
-                }
-                regress `y' c.`tindex' i.`t2' if `id'==`ii' & `post_'==0
+                regress `y' c.`tindex' i.`__qvar' if `id'==`ii' & `post_'==0
+                predict double __fit if `id'==`ii', xb
+            }
+            else if "`rolling'"=="demeanm" {
+                regress `y' i.`__mvar' if `id'==`ii' & `post_'==0
+                predict double __fit if `id'==`ii', xb
+            }
+            else if "`rolling'"=="detrendm" {
+                regress `y' c.`tindex' i.`__mvar' if `id'==`ii' & `post_'==0
                 predict double __fit if `id'==`ii', xb
             }
             qui replace `yhat' = __fit if `id'==`ii'
@@ -434,11 +448,14 @@ program define lwdid_small_single, eclass
 
 		forvalues tt = `tpost1'/`Tmax' {
 				quietly su `timevar' if `tindex'==`tt', meanonly
-				if "`t2'" == "" {
-					local lab : display %9.0f r(mean)
+				if "`__tfmt'" == "%tq" {
+					local lab : display %tq r(mean)
+				}
+				else if "`__tfmt'" == "%tm" {
+					local lab : display %tm r(mean)
 				}
 				else {
-					local lab : display %tq r(mean)
+					local lab : display %9.0f r(mean)
 				}
 
 			capture {
@@ -655,65 +672,71 @@ program define lwdid_small_single, eclass
 	* --- If graph requested, build x-axis + y-axis once, then plot     *
 
 		if "`graph'" != "" {
-			*---------------- Determine x-axis type ----------------*
-			local ISYEAR = ("`t2'"=="")   // year-only if no quarter provided
+			local ISQ = strpos("`__tfmt'","%tq")>0
+			local ISM = strpos("`__tfmt'","%tm")>0
 
-			if `ISYEAR' {
+			tempvar xdate __yearlab
+			qui gen double `xdate' = `timevar'
+			local XVAR "`xdate'"
+			quietly su `timevar' if `post_'==1, meanonly
+			local XLINE = r(min)
+			local XTITLE "xtitle("Time")"
+			quietly su `xdate', meanonly
+			local xmin = r(min)
+			local xmax = r(max)
 
-				*--------------- YEAR-ONLY X --------------------*
-				tempvar xyear
-				qui gen double `xyear' = `t1'
-				label var `xyear' "year"
-
-				quietly su `t1' if `post_'==1, meanonly
-				local XLINE = r(min)
-
-				local XVAR  "`xyear'"
-				local XL    ""   // no custom xlabel for year-only
-
+			if `ISM' {
+				qui gen int `__yearlab' = yofd(dofm(`xdate')) if !missing(`xdate')
+			}
+			else if `ISQ' {
+				qui gen int `__yearlab' = yofd(dofq(`xdate')) if !missing(`xdate')
 			}
 			else {
+				qui gen int `__yearlab' = `xdate' if !missing(`xdate')
+			}
 
-				*--------------- YEAR-QUARTER X --------------------*
-				tempvar xdate tq_
-				qui gen double `tq_'   = yq(`t1', `t2')
-				format `tq_' %tq
-				qui gen double `xdate' = `tq_'
+			quietly su `__yearlab', meanonly
+			local yminx = floor(r(min))
+			local ymaxx = floor(r(max))
+			local yspan = `ymaxx' - `yminx'
 
-				quietly su `tq_' if `post_'==1, meanonly
-				local XLINE = r(min)
-
-				local XVAR  "`xdate'"
-				local xfmt  %tq
-
-				*---------------- X-axis: quarterly ticks, end at last obs ----------------*
-				quietly su `xdate', meanonly
-				local xmin = floor(r(min))
-				local xmax = floor(r(max))
-
-				local rawx      = (`xmax' - `xmin')/10
-				local tickstep  = cond(`rawx' < 4, 4, 4*ceil(`rawx'/4))
-				local firsttick = `tickstep' * ceil(`xmin'/`tickstep')
-
-				local labs
-				local lasttick = .
-				if (`firsttick' <= `xmax') {
-					forvalues t = `firsttick'(`tickstep')`xmax' {
-						local labs "`labs' `t'"
-						local lasttick = `t'
-					}
+			local XLABS
+			local xang = 0
+			if `ISM' {
+				* keep monthly labels horizontal, matching quarterly style
+				local xang = 0
+				local mspan = `xmax' - `xmin'
+				if `mspan' <= 24       local xstep = 3
+				else if `mspan' <= 60  local xstep = 6
+				else if `mspan' <= 120 local xstep = 12
+				else if `mspan' <= 240 local xstep = 24
+				else                   local xstep = 60
+				forvalues xx = `=floor(`xmin')'(`xstep')`=floor(`xmax')' {
+					local lab : display %tm `xx'
+					local XLABS `XLABS' `xx' `"`lab'"'
 				}
-				if missing(`lasttick') | (`lasttick' < `xmax') local labs "`labs' `xmax'"
-
-			* --- Construct x-axis ticks automatically and include event year
-				local labs2
-				foreach x of local labs {
-					if abs(`x' - `XLINE') > 1 {
-						local labs2 `labs2' `x'
-					}
+			}
+			else if `ISQ' {
+				local qspan = `xmax' - `xmin'
+				if `qspan' <= 16       local xstep = 2
+				else if `qspan' <= 40  local xstep = 4
+				else if `qspan' <= 80  local xstep = 8
+				else if `qspan' <= 160 local xstep = 20
+				else                   local xstep = 40
+				forvalues xx = `=floor(`xmin')'(`xstep')`=floor(`xmax')' {
+					local lab : display %tq `xx'
+					local XLABS `XLABS' `xx' `"`lab'"'
 				}
+			}
+			else {
+				* for yearly data, keep the original axis behavior (no sparse relabeling)
+			}
 
-				local XL "xlabel(`labs2' `XLINE', format(`xfmt') labsize(small) nogrid) xscale(range(`xmin' `xmax'))"
+			if `"`XLABS'"' != "" {
+				local XL "xlabel(`XLABS', angle(`xang') labsize(vsmall) nogrid) xscale(range(`xmin' `xmax'))"
+			}
+			else {
+				local XL "xscale(range(`xmin' `xmax'))"
 			}
 
 			*---------------- Y-axis ticks: nice step (>=0.1), aligned bounds, max tick count ----------------*
@@ -736,21 +759,14 @@ program define lwdid_small_single, eclass
 				local ymax2 = `ymax' + 5*`ystep'
 			}
 			else {
-				* 1) raw step from range / target count, enforce minimum
 				local raw = max(`yrange'/`y_max_ticks', `y_min_step')
-
-				* 2) round UP to nice sequence {1,2,5} * 10^k
 				local k     = floor(log10(`raw'))
 				local base  = 10^`k'
 				local frac  = `raw'/`base'
 				local nice  = cond(`frac'<=1, 1, cond(`frac'<=2, 2, cond(`frac'<=5, 5, 10)))
 				local ystep = max(`nice'*`base', `y_min_step')
-
-				* 3) align bounds to multiples of step
 				local ymin2 = `ystep'*floor(`ymin'/`ystep')
 				local ymax2 = `ystep'*ceil(`ymax'/`ystep')
-
-				* 4) if too many ticks, increase step until within limit
 				local nticks = floor((`ymax2' - `ymin2')/`ystep') + 1
 				local guard  = 0
 				while (`nticks' > `y_max_ticks' & `guard' < 10) {
@@ -765,28 +781,25 @@ program define lwdid_small_single, eclass
 			local yfmt = cond(`ystep' >= 1, "%9.0f", "%9.1f")
 			local YL   "ylabel(`ymin2'(`ystep')`ymax2', format(`yfmt') nogrid)"
 
-**## twoway [Small-N]
+			local mono = 0
+			if strpos("`scheme'","mono") local mono = 1
 
-		* --- detect monochrome scheme
-				local mono = 0
-					if strpos("`scheme'","mono") local mono = 1
-
-					if `mono' {
-						local col_tr black%80
-						local col_ct black%60
-						local pat_tr solid
-						local pat_ct dash
-						local gsch  "scheme(s1mono)"
-						local aheight "aspectratio(0.45)"
-					}
-					else {
-						local col_tr cranberry%90
-						local col_ct navy%70
-						local pat_tr solid
-						local pat_ct dash
-						local gsch  ""
-						local aheight ""
-					}
+			if `mono' {
+				local col_tr black%80
+				local col_ct black%60
+				local pat_tr solid
+				local pat_ct dash
+				local gsch  "scheme(s1mono)"
+				local aheight "aspectratio(0.45)"
+			}
+			else {
+				local col_tr cranberry%90
+				local col_ct navy%70
+				local pat_tr solid
+				local pat_ct dash
+				local gsch  ""
+				local aheight ""
+			}
 
 			twoway ///
 				(line `TRSER' `XVAR', lpattern(`pat_tr') lcolor(`col_tr') lwidth(medthick)) ///
@@ -795,6 +808,7 @@ program define lwdid_small_single, eclass
 				xline(`XLINE', lcolor(gs8) lpattern(dash)) ///
 				`XL' ///
 				`YL' ///
+				`XTITLE' ///
 				legend(order(1 "Treated" 2 "Control") ///
 					   pos(2) ring(0) col(2) ///
 					   region(lcolor(none))) ///
@@ -802,9 +816,8 @@ program define lwdid_small_single, eclass
 				plotregion(color(white)) ///
 				`gsch' ///
 				`gopts' ///
-				`aheight' ///
-				`=cond(`ISYEAR', "", "plotregion(margin(b=14))")'
-			}
+				`aheight'
+		}
 			
 			
    * Store results in e()
@@ -843,7 +856,7 @@ program define lwdid_small_staggered, eclass
     version 16.0
 
     syntax varlist(min=1 numeric) [if] [in], ///
-        IVAR(name) TVAR(varlist min=1 max=2) GVAR(name)     ///
+        IVAR(name) TVAR(name) GVAR(name)     ///
         ROLLING(name)                        ///
         [METHOD(name)                        ///
          Small                               ///
@@ -880,10 +893,6 @@ program define lwdid_small_staggered, eclass
 		}
 			
 			
-		*-- parse tvar
-		local t1 : word 1 of `tvar'
-		local t2 : word 2 of `tvar'
-		
 		local y : word 1 of `varlist'
 		local xlist : list varlist - y
 		local rolling = lower("`rolling'")
@@ -900,17 +909,31 @@ program define lwdid_small_staggered, eclass
 		confirm variable `gvar'
 		confirm variable `ivar'
 		confirm variable `y'
-		confirm variable `t1'
-		if "`t2'" != "" confirm variable `t2'
-
-		*-- build internal time variable (supports year or year-quarter)
-		tempvar timevar
-		if "`t2'" == "" {
-			quietly gen long `timevar' = `t1' if `touse'
+		confirm variable `tvar'
+		capture confirm numeric variable `tvar'
+		if _rc {
+			di as err "tvar() must be a single numeric time variable."
+			exit 198
 		}
-		else {
-			quietly gen double `timevar' = yq(`t1', `t2') if `touse'
-			format `timevar' %tq
+
+		tempvar timevar __qvar __mvar
+		quietly gen double `timevar' = `tvar' if `touse'
+		local __tfmt : format `tvar'
+		if inlist("`rolling'","demeanq","detrendq") {
+			quietly gen byte `__qvar' = quarter(dofq(`timevar')) if `touse'
+			quietly count if `touse' & missing(`__qvar')
+			if r(N) > 0 {
+				di as err "rolling(`rolling') requires tvar() to be a Stata quarterly date variable created by yq()."
+				exit 198
+			}
+		}
+		if inlist("`rolling'","demeanm","detrendm") {
+			quietly gen byte `__mvar' = month(dofm(`timevar')) if `touse'
+			quietly count if `touse' & missing(`__mvar')
+			if r(N) > 0 {
+				di as err "rolling(`rolling') requires tvar() to be a Stata monthly date variable created by ym()."
+				exit 198
+			}
 		}
 
 		*-- count cohorts for message
@@ -977,21 +1000,19 @@ program define lwdid_small_staggered, eclass
                             qui regress `y' c.`timevar' if `id'==`idval' & `timevar' < `g'
                         }
                         else if "`rolling'" == "demeanq" {
-                            if "`t2'" == "" {
-                                di as err "rolling(demeanq) requires tvar(year quarter)."
-                                exit 198
-                            }
-                            regress `y' i.`t2' if `id'==`idval' & `timevar' < `g'
+                            regress `y' i.`__qvar' if `id'==`idval' & `timevar' < `g'
                         }
                         else if "`rolling'" == "detrendq" {
-                            if "`t2'" == "" {
-                                di as err "rolling(detrendq) requires tvar(year quarter)."
-                                exit 198
-                            }
-                            regress `y' c.`timevar' i.`t2' if `id'==`idval' & `timevar' < `g'
+                            regress `y' c.`timevar' i.`__qvar' if `id'==`idval' & `timevar' < `g'
+                        }
+                        else if "`rolling'" == "demeanm" {
+                            regress `y' i.`__mvar' if `id'==`idval' & `timevar' < `g'
+                        }
+                        else if "`rolling'" == "detrendm" {
+                            regress `y' c.`timevar' i.`__mvar' if `id'==`idval' & `timevar' < `g'
                         }
                         else {
-                            di as err "rolling() must be demean, detrend, demeanq, or detrendq"
+                            di as err "rolling() must be demean, detrend, demeanq, detrendq, demeanm, or detrendm"
                             exit 198
                         }
                     }
@@ -1007,7 +1028,7 @@ program define lwdid_small_staggered, eclass
                 }
 
                 gen double y`g'd = `y' - `yhat'
-                label var y`g'd "Residualized outcome cohort g=`g' (rolling=`rolling')"
+                label var y`g'd "(rolling=`rolling') Residualized outcome cohort g=`g' "
                 drop `yhat'
             }
 
@@ -1084,7 +1105,7 @@ program define lwdid_large, eclass
     version 16.0
 
     syntax varlist(min=1 numeric) [if] [in], ///
-        IVAR(name) TVAR(varlist min=1 max=2)  GVAR(name)     ///
+        IVAR(name) TVAR(name)  GVAR(name)     ///
         ROLLING(name)                        ///
         [METHOD(name)                        ///   
          Small                               ///    
@@ -1208,8 +1229,8 @@ program define lwdid_large, eclass
 			}
 
 
-* --- Stage 1: Residualized outcome y{g}d for each cohort
-		* >> using the reduced-form representation (computationally efficient)
+		* --- Stage 1: Residualized outcome y{g}d for each cohort
+				* >> using the reduced-form representation (computationally efficient)
 		
 				quietly {
 				tempvar yobs cy ct ctt cty cn
@@ -1224,17 +1245,32 @@ program define lwdid_large, eclass
 					capture drop y`g'd
 					gen double y`g'd = . if `touse'
 
-					if ("`rolling'" == "demean") {
-						tempvar Sy_pre n_pre
-						bys `id': egen double `Sy_pre' = max(cond(`tvar'<`g', `cy', .)) if `touse'
-						bys `id': egen double `n_pre'  = max(cond(`tvar'<`g', `cn', .)) if `touse'
-						replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
-							if `touse' & `tvar'>=`g' & `yobs' & `n_pre'>0 & !missing(`Sy_pre',`n_pre')
-						replace y`g'd = `y' - ((`Sy_pre'-`cy')/(`n_pre'-`cn')) ///
-							if `touse' & `tvar'<=`g'-3 & `yobs' & (`n_pre'-`cn')>0 & !missing(`Sy_pre',`n_pre',`cy',`cn')
-						replace y`g'd = `y' - F.`y' if `touse' & `tvar'==`g'-2 & `yobs'
-						drop `Sy_pre' `n_pre'
-					}
+						if ("`rolling'" == "demean") {
+							tempvar Sy_pre n_pre
+
+							* Compute the total sum and count of pre-treatment outcomes for each unit
+							bys `id': egen double `Sy_pre' = total(cond(`tvar' < `g' & `yobs', `y', 0)) if `touse'
+							bys `id': egen double `n_pre'  = total(cond(`tvar' < `g' & `yobs', 1, 0)) if `touse'
+
+							* Post-treatment periods:
+							* Residualize outcomes by subtracting the mean over all pre-treatment periods
+							replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
+								if `touse' & `tvar' >= `g' & `yobs' & `n_pre' > 0 ///
+								& !missing(`Sy_pre', `n_pre')
+
+							* Pre-treatment periods with t <= g-3:
+							* Residualize outcomes using the average of remaining future pre-treatment observations
+							replace y`g'd = `y' - ((`Sy_pre' - `cy') / (`n_pre' - `cn')) ///
+								if `touse' & `tvar' <= `g' - 3 & `yobs' & (`n_pre' - `cn') > 0 ///
+								& !missing(`Sy_pre', `n_pre', `cy', `cn')
+
+							* For t = g-2:
+							* Use the one-period-ahead difference
+							replace y`g'd = `y' - F.`y' ///
+								if `touse' & `tvar' == `g' - 2 & `yobs'
+
+							drop `Sy_pre' `n_pre'
+						}
 					else {  // detrend
 						local a = `g' - 1
 						replace y`g'd = . if `touse' & inlist(`tvar', `g'-1, `g'-2)
@@ -1275,12 +1311,12 @@ program define lwdid_large, eclass
 						drop `SyA' `StA' `SttA' `StyA' `nA'
 						drop `Syw' `Stw' `Sttw' `Styw' `nw' `denomW' `bW' `aW' `fitW'
 					}
-					label var y`g'd "Residualized outcome cohort g=`g' (rolling=`rolling')"
+					label var y`g'd "(rolling=`rolling') Residualized outcome cohort g=`g' "
 				}
 			 } 
 			 
 	 
-* --- Stage 2: ATT(g,t) point estimates + Influence Functions
+	* --- Stage 2: ATT(g,t) point estimates + Influence Functions
 			quietly {
 					preserve
 					keep if `touse' & `gvar' > 0
@@ -1326,273 +1362,258 @@ program define lwdid_large, eclass
 				quietly count if `touse' & f`t' & `cont'
 				if r(N) == 0 continue
 
-		* --- PS + IPW weights (needed for ipw / ipwra)
-				if inlist("`method'","ipw","ipwra") {
+				tempvar esamp_gt psamp_gt
+				qui gen byte `esamp_gt' = 0 if `touse'
+				qui gen byte `psamp_gt' = 0 if `touse'
+
+				* ------------------------------------------------------------
+				* Propensity score estimation and ATT weights
+				* ------------------------------------------------------------
+				if inlist("`method'", "ipw", "ipwra") {
 					tempvar p_hat_gt ipw_gt
+
 					sort `id' `tvar'
 					cap qui logit `dvar_g' `xlist' if `touse' & f`t' & `cont', nolog
 					if _rc != 0 continue
-					qui predict double `p_hat_gt' if e(sample), pr
-					qui gen double `ipw_gt' = cond(`dvar_g'==1, 1, `p_hat_gt'/(1-`p_hat_gt')) if e(sample)
+
+					qui replace `psamp_gt' = e(sample)
+
+					qui predict double `p_hat_gt' if `psamp_gt', pr
+					qui gen double `ipw_gt' = cond(`dvar_g' == 1, 1, `p_hat_gt' / (1 - `p_hat_gt')) ///
+						if `psamp_gt'
 				}
 
-		* --- Point estimation: ATT(g,t)
-					if "`method'" == "ra" {
-						if "`xlist'" == "" {
-							qui regress `yvar' `dvar_g' if `touse' & f`t' & `cont'
-						}
-						else {
-							qui reg `yvar' `dvar_g' `xlist' c.`dvar_g'#c.(`current_x_list') ///
-								if `touse' & f`t' & `cont'
-						}
+				* ------------------------------------------------------------
+				* Point estimation: ATT(g,t)
+				* ------------------------------------------------------------
+				if "`method'" == "ra" {
+					if "`xlist'" == "" {
+						qui regress `yvar' `dvar_g' if `touse' & f`t' & `cont'
 					}
-					else if "`method'" == "ipw" {
-						* IPW: weighted regression of y on d (ATT via weights)
-						qui reg `yvar' `dvar_g' [aw=`ipw_gt'] if e(sample)
-					}
-					else if "`method'" == "ipwra" {
+					else {
 						qui reg `yvar' `dvar_g' `xlist' c.`dvar_g'#c.(`current_x_list') ///
-							[aw=`ipw_gt'] if e(sample)
+							if `touse' & f`t' & `cont'
 					}
-					else if "`method'" == "psmatch" {
-						teffects psmatch (`yvar') (`dvar_g' `xlist') ///
-							if `touse' & f`t' & `cont', atet
+				}
+				else if "`method'" == "ipw" {
+					qui reg `yvar' `dvar_g' [aw=`ipw_gt'] if `psamp_gt'
+				}
+				else if "`method'" == "ipwra" {
+					if "`xlist'" == "" {
+						qui reg `yvar' `dvar_g' [aw=`ipw_gt'] if `psamp_gt'
 					}
-				
+					else {
+						qui reg `yvar' `dvar_g' `current_x_list' c.`dvar_g'#c.(`current_x_list') ///
+							[aw=`ipw_gt'] if `psamp_gt'
+					}
+				}
+				else if "`method'" == "psmatch" {
+					teffects psmatch (`yvar') (`dvar_g' `xlist') ///
+						if `touse' & f`t' & `cont', atet
+				}
+
 				if _rc != 0 {
-					if inlist("`method'","ipw","ipwra") {
+					if inlist("`method'", "ipw", "ipwra") {
 						cap drop `p_hat_gt' `ipw_gt'
 					}
+					drop `esamp_gt' `psamp_gt'
 					continue
 				}
 
+				qui replace `esamp_gt' = e(sample)
 
-		* --- Store point estimate
-				qui tempname b_att
-				if inlist("`method'","ra","ipw","ipwra") scalar `b_att' = _b[`dvar_g']
-				else                                     scalar `b_att' = _b[ATET:r1vs0.`dvar_g']
-				post `pf' (`g') (`t') (`r') (`b_att')
+		* ------------------------------------------------------------
+		* Store point estimate
+		* ------------------------------------------------------------
+		qui tempname b_att
+		if inlist("`method'", "ra", "ipw", "ipwra") scalar `b_att' = _b[`dvar_g']
+		else                                         scalar `b_att' = _b[ATET:r1vs0.`dvar_g']
+		post `pf' (`g') (`t') (`r') (`b_att')
 
-				
+		* ------------------------------------------------------------
+		* Influence function
+		* ------------------------------------------------------------
+		if inlist("`method'", "ra", "ipw", "ipwra") {
 
-* --- Calculate  Influence function 
-				if inlist("`method'","ra","ipw","ipwra") {
+			tempvar IF_gt
+			qui gen double `IF_gt' = 0 if `touse'
 
-					tempvar esamp_gt mu0hat_gt IF_gt
-					qui gen byte `esamp_gt' = e(sample)
+			qui su `dvar_g' if `esamp_gt', meanonly
+			local mean_D = r(mean)
 
-					qui su `dvar_g' if `esamp_gt', meanonly
-					local mean_D = r(mean)
-					
-					if "`method'" == "ra" {
+			if "`method'" == "ra" {
 
-							tempvar uhat 
-							qui gen double `IF_gt' = 0 if `touse'
+            tempvar uhat
+            qui predict double `uhat' if `esamp_gt', resid
 
-							* residual from RA regression
-							qui predict double `uhat' if e(sample), resid
+            local zvars `dvar_g' `xlist'
+            local intvars
+            if "`xlist'" != "" {
+                foreach v in `current_x_list' {
+                    tempvar intv
+                    qui gen double `intv' = `dvar_g' * `v' if `esamp_gt'
+                    local intvars `intvars' `intv'
+                }
+                local zvars `zvars' `intvars'
+            }
 
-							* exact design matrix matching:
-							* reg yvar dvar_g xlist c.dvar_g#c.(current_x_list)
+            local IFname `IF_gt'
+            local ESname `esamp_gt'
+            local Uname  `uhat'
 
-							local zvars `dvar_g' `xlist'
-							local intvars
+            mata: es  = st_data(., "`ESname'")
+            mata: idx = selectindex(es :== 1)
+            mata: Z   = st_data(idx, tokens("`zvars'"))
+            mata: Z   = J(rows(Z),1,1), Z
+            mata: u   = st_data(idx, "`Uname'")
+            mata: ZZinv = invsym(quadcross(Z,Z))
+            mata: IFb   = (Z * ZZinv) :* u
+            mata: ifvec = J(rows(es),1,0)
+            mata: ifvec[idx] = IFb[,2]
+            mata: st_store(., "`IFname'", ifvec)
 
-							if "`xlist'" != "" {
-								foreach v in `current_x_list' {
-									tempvar int_`v'
-									qui gen double `int_`v'' = `dvar_g' * `v' if e(sample)
-									local intvars `intvars' `int_`v''
-								}
-								local zvars `zvars' `intvars'
-							}
+            qui replace `IF_gt' = 0 if missing(`IF_gt')
+        }
+        else if "`method'" == "ipw" {
 
-							* pass expanded names safely
-							local IFname   `IF_gt'
-							local ESname   `esamp_gt'
-							local Uname    `uhat'
+            qui count if `esamp_gt'
+            local n_eff_gt = r(N)
 
-							* Mata objects built line-by-line
-							mata: es  = st_data(., "`ESname'")
-							mata: idx = selectindex(es :== 1)
-							mata: Z   = st_data(idx, tokens("`zvars'"))
-							mata: Z   = J(rows(Z),1,1), Z
-							mata: u   = st_data(idx, "`Uname'")
-							mata: ZZinv = invsym(quadcross(Z,Z))
-							mata: IFb   = (Z * ZZinv) :* u
-							mata: ifvec = J(rows(es),1,0)
-							mata: ifvec[idx] = IFb[,2]
-							mata: st_store(., "`IFname'", ifvec)
+            tempvar __plug
+            qui gen double `__plug' = ///
+                ((`dvar_g' / `mean_D') * (`yvar' - `b_att') ///
+                - ((1 - `dvar_g') * `p_hat_gt' / ((1 - `p_hat_gt') * `mean_D')) * (`yvar')) ///
+                if `esamp_gt'
 
-							qui replace `IF_gt' = 0 if missing(`IF_gt')
-						}
-																
-						else if "`method'" == "ipw" {
+            local IFname `IF_gt'
+            local ESname `esamp_gt'
+            local Yname  `yvar'
+            local Dname  `dvar_g'
+            local Pname  `p_hat_gt'
+            local PLname `__plug'
 
-							* initialize IF
-							
-							qui gen double `IF_gt' = 0 if `touse'
+            mata: es   = st_data(., "`ESname'")
+            mata: idx  = selectindex(es :== 1)
+            mata: y    = st_data(idx, "`Yname'")
+            mata: d    = st_data(idx, "`Dname'")
+            mata: p    = st_data(idx, "`Pname'")
+            mata: plug = st_data(idx, "`PLname'")
+            mata: X    = st_data(idx, tokens("`xlist'"))
+            mata: X    = J(rows(X),1,1), X
+            mata: W    = p :* (1 :- p)
+            mata: A    = quadcross(X, X :* W)
+            mata: Ainv = invsym(A)
+            mata: s    = X :* (d :- p)
+            mata: IFg  = s * Ainv
+            mata: gvec = ((1 :- d) :* y :* p :/ (1 :- p))
+            mata: Gamma = mean(X :* gvec)'
+            mata: corr = IFg * Gamma
+            mata: ifvec = J(rows(es),1,0)
+            mata: ifvec[idx] = (plug :- corr) :/ `n_eff_gt'
+            mata: st_store(., "`IFname'", ifvec)
 
-							qui count if `esamp_gt'
-							local n_eff_gt = r(N)
+            drop `__plug'
+        }
+        else if "`method'" == "ipwra" {
 
-							tempvar __plug
-							qui gen double `__plug' = ///
-								((`dvar_g'/`mean_D') * (`yvar' - `b_att') ///
-								- ((1-`dvar_g') * `p_hat_gt' / ((1-`p_hat_gt')*`mean_D')) * (`yvar')) ///
-								if `esamp_gt'
+            tempvar uhat
+            qui predict double `uhat' if `esamp_gt', resid
 
-							local IFname `IF_gt'
-							local ESname `esamp_gt'
-							local Yname  `yvar'
-							local Dname  `dvar_g'
-							local Pname  `p_hat_gt'
-							local PLname `__plug'
+            if "`xlist'" == "" {
 
-						* --- Mata block (step-by-step for stability)
-							mata: es  = st_data(., "`ESname'")
-							mata: idx = selectindex(es :== 1)
+                local IFname `IF_gt'
+                local ESname `esamp_gt'
+                local Uname  `uhat'
+                local Wname  `ipw_gt'
 
-							mata: y = st_data(idx, "`Yname'")
-							mata: d = st_data(idx, "`Dname'")
-							mata: p = st_data(idx, "`Pname'")
-							mata: plug = st_data(idx, "`PLname'")
+                mata: es   = st_data(., "`ESname'")
+                mata: idx  = selectindex(es :== 1)
+                mata: Z    = st_data(idx, tokens("`dvar_g'"))
+                mata: Z    = J(rows(Z),1,1), Z
+                mata: u    = st_data(idx, "`Uname'")
+                mata: w    = st_data(idx, "`Wname'")
+                mata: Qw   = quadcross(Z, Z :* w)
+                mata: Qwinv = invsym(Qw)
+                mata: M    = Z :* (w :* u)
+                mata: IFb  = M * Qwinv
+                mata: ifvec = J(rows(es),1,0)
+                mata: ifvec[idx] = IFb[,2]
+                mata: st_store(., "`IFname'", ifvec)
+            }
+            else {
 
-							mata: X = st_data(idx, tokens("`current_x_list'"))
-							mata: X = J(rows(X),1,1), X
+                local zvars `dvar_g' `current_x_list'
+                local intvars
+                foreach v in `current_x_list' {
+                    tempvar intv
+                    qui gen double `intv' = `dvar_g' * `v' if `esamp_gt'
+                    local intvars `intvars' `intv'
+                }
+                local zvars `zvars' `intvars'
 
-							* logit score IF
-							mata: W = p :* (1 :- p)
-							mata: A = quadcross(X, X :* W)
-							mata: Ainv = invsym(A)
+                local IFname `IF_gt'
+                local ESname `esamp_gt'
+                local Uname  `uhat'
+                local Wname  `ipw_gt'
+                local Pname  `p_hat_gt'
+                local Dname  `dvar_g'
+                local Zname  `zvars'
+                local Xps    `xlist'
 
-							mata: s = X :* (d :- p)
-							mata: IFg = s * Ainv
+                mata: es    = st_data(., "`ESname'")
+                mata: idx   = selectindex(es :== 1)
+                mata: Z     = st_data(idx, tokens("`Zname'"))
+                mata: Z     = J(rows(Z),1,1), Z
+                mata: X     = st_data(idx, tokens("`Xps'"))
+                mata: X     = J(rows(X),1,1), X
+                mata: u     = st_data(idx, "`Uname'")
+                mata: w     = st_data(idx, "`Wname'")
+                mata: p     = st_data(idx, "`Pname'")
+                mata: d     = st_data(idx, "`Dname'")
+                mata: Qw    = quadcross(Z, Z :* w)
+                mata: Qwinv = invsym(Qw)
+                mata: M     = Z :* (w :* u)
+                mata: A     = quadcross(X, X :* (p :* (1 :- p)))
+                mata: Ainv  = invsym(A)
+                mata: S     = X :* (d :- p)
+                mata: IFg   = S * Ainv
+                mata: H     = quadcross(Z :* ((1 :- d) :* w :* u), X)
+                mata: IFb   = (M + IFg * H') * Qwinv
+                mata: ifvec = J(rows(es),1,0)
+                mata: ifvec[idx] = IFb[,2]
+                mata: st_store(., "`IFname'", ifvec)
+            }
 
-							* Gamma term
-							mata: g = ((1 :- d) :* y :* p :/ (1 :- p))
-							mata: Gamma = mean(X :* g)'
+            qui replace `IF_gt' = 0 if missing(`IF_gt')
+        }
 
-							mata: corr = IFg * Gamma
+        qui replace `IF_gt' = 0 if missing(`IF_gt')
 
-							mata: ifvec = J(rows(es),1,0)
-							mata: ifvec[idx] = (plug :- corr) :/ `n_eff_gt'
+        tempvar if_full
+        qui gen double `if_full' = 0 if `touse'
+        qui replace `if_full' = `IF_gt' if `esamp_gt' == 1 & `touse'
 
-							mata: st_store(., "`IFname'", ifvec)
+        mata: IF_col = st_data(., "`if_full'", "`touse'")
+        mata: IF_mat = IF_mat, IF_col
+        mata: cell_g = cell_g, `g'
+        mata: cell_t = cell_t, `t'
+        local cell_count = `cell_count' + 1
 
-							drop `__plug'
-						}
-						else if "`method'" == "ipwra" {
-
-							tempvar uhat IF_gt
-							qui gen double `IF_gt' = 0 if `touse'
-
-							* weighted OLS residual from the already estimated IPWRA regression
-							qui predict double `uhat' if e(sample), resid
-
-							*---------------------------------------------*
-							* Build design matrix exactly matching:
-							* reg y d x d#x_c [aw=ipw]
-							* Z = [1, D, X, D#Xc]
-							*---------------------------------------------*
-							local zvars `dvar_g' `xlist'
-							local intvars
-
-							if "`xlist'" != "" {
-								foreach v in `current_x_list' {
-									tempvar int_`v'
-									qui gen double `int_`v'' = `dvar_g' * `v' if e(sample)
-									local intvars `intvars' `int_`v''
-								}
-								local zvars `zvars' `intvars'
-							}
-
-							* names passed safely into Mata
-							local IFname `IF_gt'
-							local ESname `esamp_gt'
-							local Uname  `uhat'
-							local Wname  `ipw_gt'
-							local Pname  `p_hat_gt'
-							local Dname  `dvar_g'
-							local Zname  `zvars'
-							local Xps    `xlist'
-
-							*---------------------------------------------*
-							* Stacked-moment exact first-order IF:
-							*   [ weighted OLS moments/ logit score moments ]
-							*---------------------------------------------*
-							mata: es   = st_data(., "`ESname'")
-							mata: idx  = selectindex(es :== 1)
-
-							* design for weighted outcome regression
-							mata: Z    = st_data(idx, tokens("`Zname'"))
-							mata: Z    = J(rows(Z),1,1), Z
-
-							* design for propensity score model (logit includes constant)
-							mata: X    = st_data(idx, tokens("`Xps'"))
-							mata: X    = J(rows(X),1,1), X
-
-							mata: u    = st_data(idx, "`Uname'")
-							mata: w    = st_data(idx, "`Wname'")
-							mata: p    = st_data(idx, "`Pname'")
-							mata: d    = st_data(idx, "`Dname'")
-
-							* WLS block
-							mata: Qw    = quadcross(Z, Z :* w)
-							mata: Qwinv = invsym(Qw)
-							mata: M     = Z :* (w :* u)              // row i = w_i u_i Z_i
-
-							* logit score block
-							mata: A    = quadcross(X, X :* (p :* (1 :- p)))
-							mata: Ainv = invsym(A)
-							mata: S    = X :* (d :- p)               // row i = X_i (d_i - p_i)
-							mata: IFg  = S * Ainv
-
-							* cross-derivative wrt gamma:
-							* derivative of w_i z_i u_i wrt gamma only for controls
-							* because w_i = 1 for treated, p/(1-p) for controls
-							mata: H    = quadcross(Z :* ((1 :- d) :* w :* u), X)
-
-							* exact first-order IF for b:
-							* IFb_i = Qw^{-1} [ m_i + H IFg_i ]
-							mata: IFb  = (M + IFg * H') * Qwinv
-
-							* coefficient on D is column 2 (col 1 = constant)
-							mata: ifvec = J(rows(es),1,0)
-							mata: ifvec[idx] = IFb[,2]
-
-							mata: st_store(., "`IFname'", ifvec)
-
-							qui replace `IF_gt' = 0 if missing(`IF_gt')
-						}
-					qui replace `IF_gt' = 0 if missing(`IF_gt')
-
-					tempvar if_full
-					qui gen double `if_full' = 0 if `touse'
-					qui replace `if_full' = `IF_gt' if `esamp_gt' == 1 & `touse'
-
-					mata: IF_col = st_data(., "`if_full'", "`touse'")
-					mata: IF_mat = IF_mat, IF_col
-					mata: cell_g = cell_g, `g'
-					mata: cell_t = cell_t, `t'
-					local cell_count = `cell_count' + 1
-
-					drop `if_full' `esamp_gt'
-					cap drop `mu0hat_gt'
-					drop `IF_gt'
-
-					if inlist("`method'","ipw","ipwra") cap drop `p_hat_gt' `ipw_gt'
-				}
-				else {
-					if inlist("`method'","ipw","ipwra") cap drop `p_hat_gt' `ipw_gt'
-				}
+				drop `if_full' `IF_gt'
+				if inlist("`method'", "ipw", "ipwra") cap drop `p_hat_gt' `ipw_gt'
 			}
+			else {
+				if inlist("`method'", "ipw", "ipwra") cap drop `p_hat_gt' `ipw_gt'
+			}
+
+			drop `esamp_gt' `psamp_gt'
 		}
-			postclose `pf'
+				}
+					postclose `pf'
 
 
 			
-* --- Stage 2b: WATT(r) aggregation
+	* --- Stage 2b: WATT(r) aggregation
 			quietly {
 			tempfile WATT_point WATT_weights
 			preserve
@@ -1658,7 +1679,7 @@ program define lwdid_large, eclass
 
 			
 			
-* --- Stage 3: Wild Bootstrap for WATT(r)
+	* --- Stage 3: Wild Bootstrap for WATT(r)
 
         if inlist("`method'","ra","ipw","ipwra") & `cell_count' > 0 {
             
@@ -1748,27 +1769,27 @@ program define lwdid_large, eclass
             mata: st_numscalar("n_vr_sc", n_vr_sc)
             local n_vr = n_vr_sc
 
-quietly forval col = 1/`n_vr' {
-    mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
-    mata: st_numscalar("theta_sc", WATT_pmat[`col', 2])
-    mata: st_numscalar("se_sc", sqrt(variance(BS_star[., `col'])))
+			quietly forval col = 1/`n_vr' {
+				mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
+				mata: st_numscalar("theta_sc", WATT_pmat[`col', 2])
+				mata: st_numscalar("se_sc", sqrt(variance(BS_star[., `col'])))
 
-    mata: bs_sort = sort(BS_star[., `col'], 1)
-    mata: n_bs = rows(bs_sort)
-    mata: lo_idx = max((1, floor(n_bs * `lo_pct' / 100)))
-    mata: hi_idx = min((n_bs, ceil(n_bs * `hi_pct' / 100)))
+				mata: bs_sort = sort(BS_star[., `col'], 1)
+				mata: n_bs = rows(bs_sort)
+				mata: lo_idx = max((1, floor(n_bs * `lo_pct' / 100)))
+				mata: hi_idx = min((n_bs, ceil(n_bs * `hi_pct' / 100)))
 
-	mata: st_numscalar("q_lo_sc", bs_sort[lo_idx,1])
-	mata: st_numscalar("q_hi_sc", bs_sort[hi_idx,1])
+				mata: st_numscalar("q_lo_sc", bs_sort[lo_idx,1])
+				mata: st_numscalar("q_hi_sc", bs_sort[hi_idx,1])
 
-    mata: st_numscalar("lo_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_hi_sc"))
-    mata: st_numscalar("hi_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_lo_sc"))
+				mata: st_numscalar("lo_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_hi_sc"))
+				mata: st_numscalar("hi_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_lo_sc"))
 
-    local rv_`col'    = rv_sc
-    local se_`col'    = se_sc
-    local lo_ci_`col' = lo_ci_sc
-    local hi_ci_`col' = hi_ci_sc
-}
+				local rv_`col'    = rv_sc
+				local se_`col'    = se_sc
+				local lo_ci_`col' = lo_ci_sc
+				local hi_ci_`col' = hi_ci_sc
+			}
 
             preserve
             qui use "`WATT_point'", clear
@@ -1787,7 +1808,7 @@ quietly forval col = 1/`n_vr' {
             format watt se lower_ci upper_ci %9.3f
             di as txt "-> WATT(r) with Wild Bootstrap `level'% CI  (star bootstrap, reps=`reps')"
             di as txt "------------------------------------------------------------"
-            list ryear watt se lower_ci upper_ci N_cohort N_units, noobs
+            list ryear watt se lower_ci upper_ci N_cohort N_units weight, noobs
 
             if "`save'" != "" {
                 qui keep ryear watt se lower_ci upper_ci N_cohort N_units
@@ -1833,46 +1854,46 @@ quietly forval col = 1/`n_vr' {
 				
 **## twoway [Large N]
 
-		* mono scheme detection
-		local mono = strpos("`scheme'","mono")
-			if `mono' {
+				* mono scheme detection
+				local mono = strpos("`scheme'","mono")
+					if `mono' {
 
-				local col_pre black%50
-				local col_post black%70
-				local mcol_pre black%50
-				local mcol_post black%70
-			}
-			else {
+						local col_pre black%50
+						local col_post black%70
+						local mcol_pre black%50
+						local mcol_post black%70
+					}
+					else {
 
-				local col_pre navy
-				local col_post cranberry
-				local mcol_pre navy%80
-				local mcol_post cranberry
+						local col_pre navy
+						local col_post cranberry
+						local mcol_pre navy%80
+						local mcol_post cranberry
 
-		}
-		twoway ///
-			(rcap lower_ci upper_ci ryear if ryear < 0, ///
-				lwidth(0.3) lcolor(`col_pre'%50)) ///
-			(rcap lower_ci upper_ci ryear if ryear >= 0, ///
-				lwidth(0.3) lcolor(`col_post'%60)) ///
-			(line watt ryear, ///
-				lcolor(gs8) lwidth(thin)) ///
-			(scatter watt ryear if ryear < 0, ///
-				mcolor(`mcol_pre') msymbol(circle) msize(medlarge)) ///
-			(scatter watt ryear if ryear >= 0, ///
-				mcolor(`mcol_post') msymbol(circle) msize(medlarge)) ///
-			, ///
-			yline(0, lcolor(gs10)) ///
-			xline(0, lcolor(gs10) lpattern(dash)) ///
-			xtitle("Time to Treatment (r)") ///
-			ytitle("WATT(r)") ///
-			title(`"`title'"') ///
-			xlabel(`xmin'(`xstep')`xmax' 0, labsize(small)) ///
-			ylabel(`ymin'(`ystep')`ymax', format(%5.2f)) ///
-			legend(off) ///
-			scheme(`scheme') ///
-			`gopts'
-						}
+				}
+				twoway ///
+					(rcap lower_ci upper_ci ryear if ryear < 0, ///
+						lwidth(0.3) lcolor(`col_pre'%50)) ///
+					(rcap lower_ci upper_ci ryear if ryear >= 0, ///
+						lwidth(0.3) lcolor(`col_post'%60)) ///
+					(line watt ryear, ///
+						lcolor(gs8) lwidth(thin)) ///
+					(scatter watt ryear if ryear < 0, ///
+						mcolor(`mcol_pre') msymbol(circle) msize(medlarge)) ///
+					(scatter watt ryear if ryear >= 0, ///
+						mcolor(`mcol_post') msymbol(circle) msize(medlarge)) ///
+					, ///
+					yline(0, lcolor(gs10)) ///
+					xline(0, lcolor(gs10) lpattern(dash)) ///
+					xtitle("Time to Treatment (r)") ///
+					ytitle("WATT(r)") ///
+					title(`"`title'"') ///
+					xlabel(`xmin'(`xstep')`xmax' 0, labsize(small)) ///
+					ylabel(`ymin'(`ystep')`ymax', format(%5.2f)) ///
+					legend(off) ///
+					scheme(`scheme') ///
+					`gopts'
+								}
 					restore
 					
 					
@@ -1885,53 +1906,53 @@ end
 
 
 **# RI
-capture mata: mata drop lwdid_ri_inline()
+		capture mata: mata drop lwdid_ri_inline()
 
-mata:
-real scalar lwdid_ri_inline(
-    real scalar reps,
-    real scalar b0,
-    string scalar rhs
-)
-{
-    real colvector fp, Y, D, Dp, res
-    real matrix X, Z, bhat
-    real scalar n_fp, r, i, j, tmp
-    string rowvector xvars
+		mata:
+		real scalar lwdid_ri_inline(
+			real scalar reps,
+			real scalar b0,
+			string scalar rhs
+		)
+		{
+			real colvector fp, Y, D, Dp, res
+			real matrix X, Z, bhat
+			real scalar n_fp, r, i, j, tmp
+			string rowvector xvars
 
-    fp   = selectindex(st_data(., "firstpost") :== 1)
-    n_fp = rows(fp)
+			fp   = selectindex(st_data(., "firstpost") :== 1)
+			n_fp = rows(fp)
 
-    Y = st_data(fp, "ydot_postavg")
-    D = st_data(fp, "d_")
+			Y = st_data(fp, "ydot_postavg")
+			D = st_data(fp, "d_")
 
-    xvars = tokens(rhs)
-    if (length(xvars) > 0) {
-        X = J(n_fp,1,1), st_data(fp, xvars)
-    }
-    else {
-        X = J(n_fp,1,1)
-    }
+			xvars = tokens(rhs)
+			if (length(xvars) > 0) {
+				X = J(n_fp,1,1), st_data(fp, xvars)
+			}
+			else {
+				X = J(n_fp,1,1)
+			}
 
-    res = J(reps,1,.)
+			res = J(reps,1,.)
 
-    for (r = 1; r <= reps; r++) {
-        Dp = D
+			for (r = 1; r <= reps; r++) {
+				Dp = D
 
-        for (i = n_fp; i >= 2; i--) {
-            j     = ceil(i * runiform(1,1))
-            tmp   = Dp[i]
-            Dp[i] = Dp[j]
-            Dp[j] = tmp
-        }
+				for (i = n_fp; i >= 2; i--) {
+					j     = ceil(i * runiform(1,1))
+					tmp   = Dp[i]
+					Dp[i] = Dp[j]
+					Dp[j] = tmp
+				}
 
-        Z    = X, Dp
-        bhat = invsym(quadcross(Z,Z)) * quadcross(Z,Y)
-        res[r] = bhat[rows(bhat),1]
-    }
+				Z    = X, Dp
+				bhat = invsym(quadcross(Z,Z)) * quadcross(Z,Y)
+				res[r] = bhat[rows(bhat),1]
+			}
 
-    return( (sum(abs(res) :>= abs(b0)) + 1) / (rows(res) + 1) )
-}
-end
+			return( (sum(abs(res) :>= abs(b0)) + 1) / (rows(res) + 1) )
+		}
+		end
 
 
