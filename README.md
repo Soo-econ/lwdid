@@ -8,7 +8,7 @@ A Stata package that implements the **Rolling Difference-in-Differences Estimato
 
 <br>
 
-# __⚠️Latest version of `lwdid.ado`: 03/23/2026__
+# __⚠️Latest version of `lwdid.ado`: 03/27/2026__
 >
 > We are currently preparing the package for submission, and updates may continue in the meantime. 
 > To stay up to date, please reinstall the package following the instructions in this README (be sure to use the `, replace` option).
@@ -109,7 +109,8 @@ help lwdid
 | `ivar(varname)` | Panel identifier (numeric or string) |
 | `tvar(varname)` | Time variable. The format of the variable determines the data frequency:<br><br>• Annual: numeric year variable (e.g., `year`)<br>• Quarterly: Stata quarterly date (e.g., `%tq`)<br>• Monthly: Stata monthly date (e.g., `%tm`) |
 | `gvar(varname)` | Treatment cohort variable (first treated period). Never‐treated units should be coded as 0.|
-| `rolling(type)` | Unit-specific Transformation type used to residualize the outcome variable. <br><br> **Available types:** <br> • `demean` – removes the unit-specific pre-treatment mean <br> • `detrend` – removes the unit-specific linear pre-treatment trend <br> • `demeanq` – demeaning with quarter-of-year effects removed <br> • `detrendq` – detrending with quarter-of-year effects removed <br> • `demeanm` – demeaning with month-of-year effects removed <br> • `detrendm` – detrending with month-of-year effects removed <br><br> **Note:** `demeanq`, `detrendq`, `demeanm`, and `detrendm` are currently available only in the small-`N` implementation. <br> For quarterly data, `tvar()` must be a single Stata quarterly date variable created with `yq()`. <br> For monthly data, `tvar()` must be a single Stata monthly date variable created with `ym()`. In all cases, `gvar()` must be defined on the same time scale as `tvar()`. <br> For more detailed examples, see [Example 2: Using Quarterly (or Monthly) Data](#example-2-using-quarterly-data).|
+| `rolling(type)` | Unit-specific Transformation type used to residualize the outcome variable. <br><br> **Available types:** <br> • `demean` – removes the unit-specific pre-treatment mean <br> • `detrend` – removes the unit-specific linear pre-treatment trend <br> • `demeanq` – demeaning with quarter-of-year effects removed <br> • `detrendq` – detrending with quarter-of-year effects removed <br> • `demeanm` – demeaning with month-of-year effects removed <br> • `detrendm` – detrending with month-of-year effects removed <br><br>
+**Note:** `demeanq`, `detrendq`, `demeanm`, and `detrendm` are currently available only in the small-`N` implementation. These options require `tvar()` and `gvar()` to be defined on the same Stata date scale. See [Example 2: Using Quarterly (or Monthly) Data](#example-2-using-quarterly-data) for details.|
 
 
 ### **Required Estimation Options (depends on implementation)**
