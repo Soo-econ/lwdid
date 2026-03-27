@@ -1,9 +1,9 @@
 v 2.0
-d lwdid: Lee–Wooldridge rolling Difference-in-Differences estimator for small-N and large-N panel data
+d lwdid: Rolling Difference-in-Differences Estimator for Small-N and Large-N Panel Data
 d Authors: Soo Jeong Lee (SIUC) and Jeffrey M. Wooldridge (MSU)
 d Contact: soojeong.lee [at] siu.edu, wooldri1 [at] msu.edu
 d https://github.com/Soo-econ/lwdid
-d Distribution-Date: 04MAR2026
+d Distribution-Date: 27MAR2026
 d
 d Requires: Stata 16+
 d
