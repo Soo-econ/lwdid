@@ -8,7 +8,7 @@ A Stata package that implements the **Rolling Difference-in-Differences Estimato
 
 <br>
 
-# ⚠️ Latest version of `lwdid.ado`: version 2.1 (03/27/2026)
+# ⚠️ Latest version of `lwdid.ado`: version 2.1 (03/30/2026)
 
 > We are currently preparing the package for submission, and updates may continue in the meantime.  
 > To ensure that you are using the most recent version, please reinstall the package following the instructions in this README and include the `, replace` option.  
