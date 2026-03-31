@@ -1833,12 +1833,12 @@ program define lwdid_large, eclass
 
             di as txt "-> WATT(r) with Wild Bootstrap `level'% CI  (star bootstrap, reps=`reps')"
             di as txt "------------------------------------------------------------"
-            if "`rolling'" == "demean" {
-                list ryear watt se lower_ci upper_ci watt_norm lower_ci_norm upper_ci_norm N_cohort N_units weight, noobs
-            }
-            else {
-                list ryear watt se lower_ci upper_ci N_cohort N_units weight, noobs
-            }
+			if "`rolling'" == "demean" {
+			                list ryear watt_norm se lower_ci upper_ci N_cohort N_units, noobs
+			            }
+			            else {
+			                list ryear watt se lower_ci upper_ci N_cohort N_units, noobs
+			            }
 
             if "`save'" != "" {
                 qui keep ryear ///
