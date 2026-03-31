@@ -1244,27 +1244,21 @@ program define lwdid_large, eclass
 				foreach g of local cohorts {
 					capture drop y`g'd
 					gen double y`g'd = . if `touse'
-					if ("`rolling'" == "demean") {
-						tempvar Sy_pre n_pre
+				if ("`rolling'" == "demean") {
+					tempvar Sy_pre n_pre
 
-						* Total sum and count of pre-treatment outcomes for each unit
-						bys `id': egen double `Sy_pre' = total(cond(`tvar' < `g' & `yobs', `y', 0)) if `touse'
-						bys `id': egen double `n_pre'  = total(cond(`tvar' < `g' & `yobs', 1, 0)) if `touse'
+					* Total sum and count of pre-treatment outcomes for each unit
+					bys `id': egen double `Sy_pre' = total(cond(`tvar' < `g' & `yobs', `y', 0)) if `touse'
+					bys `id': egen double `n_pre'  = total(cond(`tvar' < `g' & `yobs', 1, 0)) if `touse'
 
-						* Post-treatment periods:
-						* Subtract the mean over all pre-treatment periods
-						replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
-							if `touse' & `tvar' >= `g' & `yobs' & `n_pre' > 0 ///
-							& !missing(`Sy_pre', `n_pre')
+					* Pre- and post-treatment periods:
+					* Subtract the mean over all pre-treatment periods
+					replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
+						if `touse' & `yobs' & `n_pre' > 0 ///
+						& !missing(`Sy_pre', `n_pre')
 
-						* Pre-treatment periods:
-						* Leave-one-out mean over all pre-treatment periods
-						replace y`g'd = `y' - ((`Sy_pre' - `y') / (`n_pre' - 1)) ///
-							if `touse' & `tvar' < `g' & `yobs' & `n_pre' > 1 ///
-							& !missing(`Sy_pre', `n_pre')
-
-						drop `Sy_pre' `n_pre'
-					}
+					drop `Sy_pre' `n_pre'
+				}
 					else {  // detrend: use one fixed pre-treatment trend for both pre and post
 						tempvar SyP StP SttP StyP nP denomP bP aP fitP
 
