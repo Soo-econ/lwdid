@@ -1,6 +1,6 @@
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.1 March 27 2026
+*! version 2.1 March 30 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 *! https://github.com/Soo-econ/lwdid.git  [Readme]
@@ -1244,72 +1244,57 @@ program define lwdid_large, eclass
 				foreach g of local cohorts {
 					capture drop y`g'd
 					gen double y`g'd = . if `touse'
+					if ("`rolling'" == "demean") {
+						tempvar Sy_pre n_pre
 
-						if ("`rolling'" == "demean") {
-							tempvar Sy_pre n_pre
+						* Total sum and count of pre-treatment outcomes for each unit
+						bys `id': egen double `Sy_pre' = total(cond(`tvar' < `g' & `yobs', `y', 0)) if `touse'
+						bys `id': egen double `n_pre'  = total(cond(`tvar' < `g' & `yobs', 1, 0)) if `touse'
 
-							* Compute the total sum and count of pre-treatment outcomes for each unit
-							bys `id': egen double `Sy_pre' = total(cond(`tvar' < `g' & `yobs', `y', 0)) if `touse'
-							bys `id': egen double `n_pre'  = total(cond(`tvar' < `g' & `yobs', 1, 0)) if `touse'
+						* Post-treatment periods:
+						* Subtract the mean over all pre-treatment periods
+						replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
+							if `touse' & `tvar' >= `g' & `yobs' & `n_pre' > 0 ///
+							& !missing(`Sy_pre', `n_pre')
 
-							* Post-treatment periods:
-							* Residualize outcomes by subtracting the mean over all pre-treatment periods
-							replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
-								if `touse' & `tvar' >= `g' & `yobs' & `n_pre' > 0 ///
-								& !missing(`Sy_pre', `n_pre')
+						* Pre-treatment periods:
+						* Leave-one-out mean over all pre-treatment periods
+						replace y`g'd = `y' - ((`Sy_pre' - `y') / (`n_pre' - 1)) ///
+							if `touse' & `tvar' < `g' & `yobs' & `n_pre' > 1 ///
+							& !missing(`Sy_pre', `n_pre')
 
-							* Pre-treatment periods with t <= g-3:
-							* Residualize outcomes using the average of remaining future pre-treatment observations
-							replace y`g'd = `y' - ((`Sy_pre' - `cy') / (`n_pre' - `cn')) ///
-								if `touse' & `tvar' <= `g' - 3 & `yobs' & (`n_pre' - `cn') > 0 ///
-								& !missing(`Sy_pre', `n_pre', `cy', `cn')
-
-							* For t = g-2:
-							* Use the one-period-ahead difference
-							replace y`g'd = `y' - F.`y' ///
-								if `touse' & `tvar' == `g' - 2 & `yobs'
-
-							drop `Sy_pre' `n_pre'
-						}
-					else {  // detrend
-						local a = `g' - 1
-						replace y`g'd = . if `touse' & inlist(`tvar', `g'-1, `g'-2)
+						drop `Sy_pre' `n_pre'
+					}
+					else {  // detrend: use one fixed pre-treatment trend for both pre and post
 						tempvar SyP StP SttP StyP nP denomP bP aP fitP
-						bys `id': egen double `SyP'  = max(cond(`tvar'<`g', `cy',  .)) if `touse'
-						bys `id': egen double `StP'  = max(cond(`tvar'<`g', `ct',  .)) if `touse'
-						bys `id': egen double `SttP' = max(cond(`tvar'<`g', `ctt', .)) if `touse'
-						bys `id': egen double `StyP' = max(cond(`tvar'<`g', `cty', .)) if `touse'
-						bys `id': egen double `nP'   = max(cond(`tvar'<`g', `cn',  .)) if `touse'
-						gen double `denomP' = `nP'*`SttP' - (`StP')^2 if `touse'
+
+						* Pre-treatment totals for each unit (using all periods t < g)
+						bys `id': egen double `SyP'  = max(cond(`tvar' < `g', `cy',  .)) if `touse'
+						bys `id': egen double `StP'  = max(cond(`tvar' < `g', `ct',  .)) if `touse'
+						bys `id': egen double `SttP' = max(cond(`tvar' < `g', `ctt', .)) if `touse'
+						bys `id': egen double `StyP' = max(cond(`tvar' < `g', `cty', .)) if `touse'
+						bys `id': egen double `nP'   = max(cond(`tvar' < `g', `cn',  .)) if `touse'
+
+						* Slope and intercept from the full pre-treatment sample
+						gen double `denomP' = `nP' * `SttP' - (`StP')^2 if `touse'
 						gen double `bP' = .
-						replace `bP' = (`nP'*`StyP'-`StP'*`SyP')/`denomP' if `touse' & `nP'>1 & `denomP'!=0
+						replace `bP' = (`nP' * `StyP' - `StP' * `SyP') / `denomP' ///
+							if `touse' & `nP' > 1 & `denomP' != 0
+
 						gen double `aP' = .
-						replace `aP' = (`SyP'-`bP'*`StP')/`nP' if `touse' & `nP'>1 & !missing(`bP')
+						replace `aP' = (`SyP' - `bP' * `StP') / `nP' ///
+							if `touse' & `nP' > 1 & !missing(`bP')
+
+						* One fixed fitted pre-trend for all periods
 						gen double `fitP' = .
-						replace `fitP' = `aP'+`bP'*`tvar' if `touse' & !missing(`aP',`bP')
-						replace y`g'd = `y' - `fitP' if `touse' & `tvar'>=`g' & `yobs' & !missing(`fitP')
-						tempvar SyA StA SttA StyA nA Syw Stw Sttw Styw nw denomW bW aW fitW
-						bys `id': egen double `SyA'  = max(cond(`tvar'<=`a', `cy',  .)) if `touse'
-						bys `id': egen double `StA'  = max(cond(`tvar'<=`a', `ct',  .)) if `touse'
-						bys `id': egen double `SttA' = max(cond(`tvar'<=`a', `ctt', .)) if `touse'
-						bys `id': egen double `StyA' = max(cond(`tvar'<=`a', `cty', .)) if `touse'
-						bys `id': egen double `nA'   = max(cond(`tvar'<=`a', `cn',  .)) if `touse'
-						gen double `Syw'  = `SyA'  - `cy'  if `touse'
-						gen double `Stw'  = `StA'  - `ct'  if `touse'
-						gen double `Sttw' = `SttA' - `ctt' if `touse'
-						gen double `Styw' = `StyA' - `cty' if `touse'
-						gen double `nw'   = `nA'   - `cn'  if `touse'
-						gen double `denomW' = `nw'*`Sttw' - (`Stw')^2 if `touse'
-						gen double `bW' = .
-						replace `bW' = (`nw'*`Styw'-`Stw'*`Syw')/`denomW' if `touse' & `nw'>1 & `denomW'!=0
-						gen double `aW' = .
-						replace `aW' = (`Syw'-`bW'*`Stw')/`nw' if `touse' & `nw'>1 & !missing(`bW')
-						gen double `fitW' = .
-						replace `fitW' = `aW'+`bW'*`tvar' if `touse' & !missing(`aW',`bW')
-						replace y`g'd = `y' - `fitW' if `touse' & `tvar'<=`g'-3 & `yobs' & `nw'>1 & !missing(`fitW')
+						replace `fitP' = `aP' + `bP' * `tvar' ///
+							if `touse' & !missing(`aP', `bP')
+
+						* Apply the same detrending transformation to both pre and post periods
+						replace y`g'd = `y' - `fitP' ///
+							if `touse' & `yobs' & !missing(`fitP')
+
 						drop `SyP' `StP' `SttP' `StyP' `nP' `denomP' `bP' `aP' `fitP'
-						drop `SyA' `StA' `SttA' `StyA' `nA'
-						drop `Syw' `Stw' `Sttw' `Styw' `nw' `denomW' `bW' `aW' `fitW'
 					}
 					label var y`g'd "(rolling=`rolling') Residualized outcome cohort g=`g' "
 				}
@@ -1354,8 +1339,6 @@ program define lwdid_large, eclass
 
 			forval t = `tmin'/`tmax' {
 				local r = `t' - `g'
-				if ("`rolling'" == "demean"  & `r' == -1)           continue
-				if ("`rolling'" == "detrend" & inlist(`r', -1, -2)) continue
 
 				quietly replace `cont' = 0 if `touse'
 				quietly replace `cont' = (`gvar' > `t' | `gvar' == 0 | `gvar' == `g') if `touse'
@@ -1620,10 +1603,9 @@ program define lwdid_large, eclass
 			use "`ATTfile'", clear
 			merge m:1 cohort using "`COHORTSIZE'", nogen
 			if ("`rolling'" == "demean") {
-				replace att = 0 if ryear == -1
-				drop if missing(att) & ryear != -1
+				drop if missing(att)
 			}
-			else if ("`rolling'" == "detrend") {
+	else if ("`rolling'" == "detrend") {
 				replace att = 0 if inlist(ryear,-1,-2)
 				drop if missing(att) & !inlist(ryear,-1,-2)
 			}
@@ -1641,10 +1623,9 @@ program define lwdid_large, eclass
 			use "`ATTfile'", clear
 			merge m:1 cohort using "`COHORTSIZE'", nogen
 			if ("`rolling'" == "demean") {
-				replace att = 0 if ryear == -1
-				drop if missing(att) & ryear != -1
+				drop if missing(att)
 			}
-			else if ("`rolling'" == "detrend") {
+	else if ("`rolling'" == "detrend") {
 				replace att = 0 if inlist(ryear,-1,-2)
 				drop if missing(att) & !inlist(ryear,-1,-2)
 			}
@@ -1656,22 +1637,6 @@ program define lwdid_large, eclass
 			gen double w_att  = weight * att
 			duplicates drop ryear cohort, force
 			collapse (sum) watt = w_att (sum) weight (first) N_cohort N_units, by(ryear)
-			if ("`rolling'" == "demean") {
-				set obs `=_N+1'
-				replace ryear=-1 in L
-				replace watt=0   in L
-				replace weight=1 in L
-			}
-			else if ("`rolling'" == "detrend") {
-				set obs `=_N+1'
-				replace ryear=-1 in L
-				replace watt=0   in L
-				replace weight=1 in L
-				set obs `=_N+1'
-				replace ryear=-2 in L
-				replace watt=0   in L
-				replace weight=1 in L
-			}
 			sort ryear
 			qui save "`WATT_point'", replace
 			restore
@@ -1687,8 +1652,6 @@ program define lwdid_large, eclass
             quietly {
                 preserve
                 use "`WATT_point'", clear
-                if "`rolling'" == "demean"  drop if ryear == -1
-                if "`rolling'" == "detrend" drop if inlist(ryear,-1,-2)
                 qui drop if missing(watt)
                 sort ryear
                 mkmat ryear watt, matrix(WATT_pmat)
@@ -1759,6 +1722,28 @@ program define lwdid_large, eclass
 
                     BS_star[rep,.] = colsum(IF_r :* xi_i)
                 }
+
+                // What gets plotted / reported depends on rolling()
+                WATT_plot = WATT_pmat[,2]
+                BS_plot   = BS_star
+
+                if ("`rolling'" == "demean") {
+                    base_idx = .
+                    for (rv=1; rv<=n_vr; rv++) {
+                        if (WATT_pmat[rv,1] == -1) {
+                            base_idx = rv
+                            break
+                        }
+                    }
+
+                    if (base_idx != .) {
+                        WATT_plot = WATT_pmat[,2] :- WATT_pmat[base_idx,2]
+                        BS_plot   = BS_star :- BS_star[,base_idx]
+                    }
+                }
+
+                // Append plotting/reporting estimand as third column
+                WATT_pmat = WATT_pmat, WATT_plot
             }
 
             local alpha  = (100 - `level') / 100
@@ -1771,10 +1756,11 @@ program define lwdid_large, eclass
 
 			quietly forval col = 1/`n_vr' {
 				mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
-				mata: st_numscalar("theta_sc", WATT_pmat[`col', 2])
-				mata: st_numscalar("se_sc", sqrt(variance(BS_star[., `col'])))
+				mata: st_numscalar("theta_raw_sc",  WATT_pmat[`col', 2])
+				mata: st_numscalar("theta_plot_sc", WATT_pmat[`col', 3])
+				mata: st_numscalar("se_plot_sc", sqrt(variance(BS_plot[., `col'])))
 
-				mata: bs_sort = sort(BS_star[., `col'], 1)
+				mata: bs_sort = sort(BS_plot[., `col'], 1)
 				mata: n_bs = rows(bs_sort)
 				mata: lo_idx = max((1, floor(n_bs * `lo_pct' / 100)))
 				mata: hi_idx = min((n_bs, ceil(n_bs * `hi_pct' / 100)))
@@ -1782,45 +1768,103 @@ program define lwdid_large, eclass
 				mata: st_numscalar("q_lo_sc", bs_sort[lo_idx,1])
 				mata: st_numscalar("q_hi_sc", bs_sort[hi_idx,1])
 
-				mata: st_numscalar("lo_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_hi_sc"))
-				mata: st_numscalar("hi_ci_sc", st_numscalar("theta_sc") - st_numscalar("q_lo_sc"))
+				mata: st_numscalar("lo_ci_plot_sc", st_numscalar("theta_plot_sc") - st_numscalar("q_hi_sc"))
+				mata: st_numscalar("hi_ci_plot_sc", st_numscalar("theta_plot_sc") - st_numscalar("q_lo_sc"))
 
-				local rv_`col'    = rv_sc
-				local se_`col'    = se_sc
-				local lo_ci_`col' = lo_ci_sc
-				local hi_ci_`col' = hi_ci_sc
+				local rv_`col'          = rv_sc
+				local theta_raw_`col'   = theta_raw_sc
+				local theta_plot_`col'  = theta_plot_sc
+				local se_plot_`col'     = se_plot_sc
+				local lo_ci_plot_`col'  = lo_ci_plot_sc
+				local hi_ci_plot_`col'  = hi_ci_plot_sc
 			}
 
-            preserve
+                   preserve
             qui use "`WATT_point'", clear
             qui gen double se       = .
             qui gen double lower_ci = .
             qui gen double upper_ci = .
+            qui gen double watt_plot     = .
+            qui gen double se_plot       = .
+            qui gen double lower_ci_plot = .
+            qui gen double upper_ci_plot = .
+            qui gen double base_rminus1  = .
+            qui gen double watt_norm     = .
+            qui gen double lower_ci_norm = .
+            qui gen double upper_ci_norm = .
 
             quietly forval col = 1/`n_vr' {
-                qui replace se       = `se_`col''    if ryear == `rv_`col''
-                qui replace lower_ci = `lo_ci_`col'' if ryear == `rv_`col''
-                qui replace upper_ci = `hi_ci_`col'' if ryear == `rv_`col''
+				qui replace watt_plot     = `theta_plot_`col''  if ryear == `rv_`col''
+				qui replace se_plot       = `se_plot_`col''     if ryear == `rv_`col''
+				qui replace lower_ci_plot = `lo_ci_plot_`col''  if ryear == `rv_`col''
+				qui replace upper_ci_plot = `hi_ci_plot_`col''  if ryear == `rv_`col''
+			}
+
+			if "`rolling'" == "detrend" {
+				qui replace watt_plot     = 0 if inlist(ryear,-1,-2)
+				qui replace lower_ci_plot = 0 if inlist(ryear,-1,-2)
+				qui replace upper_ci_plot = 0 if inlist(ryear,-1,-2)
+				qui replace se_plot       = 0 if inlist(ryear,-1,-2)
+			}
+
+            qui replace se       = se_plot
+            qui replace lower_ci = lower_ci_plot
+            qui replace upper_ci = upper_ci_plot
+
+            if "`rolling'" == "demean" {
+                qui su watt if ryear == -1, meanonly
+                local base = r(mean)
+                qui replace base_rminus1  = `base'
+                qui replace watt_norm     = watt_plot
+                qui replace lower_ci_norm = lower_ci_plot
+                qui replace upper_ci_norm = upper_ci_plot
+
+                * force exact zero at r = -1 for display after normalized inference
+                qui replace watt_norm     = 0 if ryear == -1
+                qui replace lower_ci_norm = 0 if ryear == -1
+                qui replace upper_ci_norm = 0 if ryear == -1
             }
 
             sort ryear
             
             format watt se lower_ci upper_ci %9.3f
+            format watt_plot se_plot lower_ci_plot upper_ci_plot %9.3f
+            format watt_norm lower_ci_norm upper_ci_norm %9.3f
+
             di as txt "-> WATT(r) with Wild Bootstrap `level'% CI  (star bootstrap, reps=`reps')"
             di as txt "------------------------------------------------------------"
-            list ryear watt se lower_ci upper_ci N_cohort N_units weight, noobs
+            if "`rolling'" == "demean" {
+                list ryear watt se lower_ci upper_ci watt_norm lower_ci_norm upper_ci_norm N_cohort N_units weight, noobs
+            }
+            else {
+                list ryear watt se lower_ci upper_ci N_cohort N_units weight, noobs
+            }
 
             if "`save'" != "" {
-                qui keep ryear watt se lower_ci upper_ci N_cohort N_units
-                qui order ryear watt se lower_ci upper_ci N_cohort N_units
+                qui keep ryear ///
+                    watt se lower_ci upper_ci ///
+                    watt_plot se_plot lower_ci_plot upper_ci_plot ///
+                    watt_norm lower_ci_norm upper_ci_norm ///
+                    base_rminus1 ///
+                    N_cohort N_units
+
+                qui order ryear ///
+                    watt se lower_ci upper_ci ///
+                    watt_plot se_plot lower_ci_plot upper_ci_plot ///
+                    watt_norm lower_ci_norm upper_ci_norm ///
+                    base_rminus1 ///
+                    N_cohort N_units
                 
                 * reset display format before saving
                 format watt se lower_ci upper_ci %9.0g
+                format watt_plot se_plot lower_ci_plot upper_ci_plot %9.0g
+                format watt_norm lower_ci_norm upper_ci_norm %9.0g
+                format base_rminus1 %9.0g
+
                 qui save "`save'", replace
             }
 				
 * --- Graph
-
         if "`graph'" != "" {
                 if "`title'" == "" local title "lwdid: `method' (`rolling')"
                 local base_r = 0
@@ -1829,10 +1873,13 @@ program define lwdid_large, eclass
                 local xmax = r(max)
                 local xrange = `xmax' - `xmin'
                 local xstep = cond(`xrange'>40, 10, 5)
-                qui su upper_ci if !missing(upper_ci), meanonly
+
+                * y-axis range based on plotted confidence intervals
+                qui su upper_ci_plot if !missing(upper_ci_plot), meanonly
                 local yhi = r(max)
-                qui su lower_ci if !missing(lower_ci), meanonly
+                qui su lower_ci_plot if !missing(lower_ci_plot), meanonly
                 local ylo = r(min)
+
                 if (`yhi' - `ylo') < 0.2 {
                     local ymid = (`yhi' + `ylo') / 2
                     local yhi  = `ymid' + 0.1
@@ -1854,55 +1901,61 @@ program define lwdid_large, eclass
 				
 **## twoway [Large N]
 
-				* mono scheme detection
-				local mono = strpos("`scheme'","mono")
-					if `mono' {
+                               * mono scheme detection
+                local mono = strpos("`scheme'","mono")
+                if `mono' {
+                    local col_pre black%50
+                    local col_post black%70
+                    local mcol_pre black%50
+                    local mcol_post black%70
+                }
+                else {
+                    local col_pre navy
+                    local col_post cranberry
+                    local mcol_pre navy%80
+                    local mcol_post cranberry
+                }
 
-						local col_pre black%50
-						local col_post black%70
-						local mcol_pre black%50
-						local mcol_post black%70
-					}
-					else {
+                local yttl "WATT(r)"
+                if "`rolling'" == "demean" {
+                    local yttl "WATT(r), normalized at r = -1"
+                }
+                else if "`rolling'" == "detrend" {
+                    local yttl "WATT(r), relative to pre-treatment trend"
+                }
 
-						local col_pre navy
-						local col_post cranberry
-						local mcol_pre navy%80
-						local mcol_post cranberry
-
-				}
-				twoway ///
-					(rcap lower_ci upper_ci ryear if ryear < 0, ///
-						lwidth(0.3) lcolor(`col_pre'%50)) ///
-					(rcap lower_ci upper_ci ryear if ryear >= 0, ///
-						lwidth(0.3) lcolor(`col_post'%60)) ///
-					(line watt ryear, ///
-						lcolor(gs8) lwidth(thin)) ///
-					(scatter watt ryear if ryear < 0, ///
-						mcolor(`mcol_pre') msymbol(circle) msize(medlarge)) ///
-					(scatter watt ryear if ryear >= 0, ///
-						mcolor(`mcol_post') msymbol(circle) msize(medlarge)) ///
-					, ///
-					yline(0, lcolor(gs10)) ///
-					xline(0, lcolor(gs10) lpattern(dash)) ///
-					xtitle("Time to Treatment (r)") ///
-					ytitle("WATT(r)") ///
-					title(`"`title'"') ///
-					xlabel(`xmin'(`xstep')`xmax' 0, labsize(small)) ///
-					ylabel(`ymin'(`ystep')`ymax', format(%5.2f)) ///
-					legend(off) ///
-					scheme(`scheme') ///
-					`gopts'
-								}
-					restore
-					
-					
-				quietly {
-					mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star
-					mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m bs_sort n_bs lo_idx hi_idx
-				}
+                twoway ///
+                    (rcap lower_ci_plot upper_ci_plot ryear if ryear < 0, ///
+                        lwidth(0.3) lcolor(`col_pre'%50)) ///
+                    (rcap lower_ci_plot upper_ci_plot ryear if ryear >= 0, ///
+                        lwidth(0.3) lcolor(`col_post'%60)) ///
+                    (line watt_plot ryear, ///
+                        lcolor(gs8) lwidth(thin)) ///
+                    (scatter watt_plot ryear if ryear < 0, ///
+                        mcolor(`mcol_pre') msymbol(circle) msize(medlarge)) ///
+                    (scatter watt_plot ryear if ryear >= 0, ///
+                        mcolor(`mcol_post') msymbol(circle) msize(medlarge)) ///
+                    , ///
+                    yline(0, lcolor(gs10)) ///
+                    xline(0, lcolor(gs10) lpattern(dash)) ///
+                    xtitle("Time to Treatment (r)") ///
+                    ytitle("`yttl'") ///
+                    title(`"`title'"') ///
+                    xlabel(`xmin'(`xstep')`xmax' 0, labsize(small)) ///
+                    ylabel(`ymin'(`ystep')`ymax', format(%5.2f)) ///
+                    legend(off) ///
+                    scheme(`scheme') ///
+                    `gopts'
+        }
+			restore
+						
+						
+			quietly {
+				mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star BS_plot WATT_plot
+				mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m bs_sort n_bs lo_idx hi_idx
+			}
 		}
-end
+	end
 
 
 **# RI
