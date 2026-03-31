@@ -1341,7 +1341,17 @@ program define lwdid_large, eclass
 				local r = `t' - `g'
 
 				quietly replace `cont' = 0 if `touse'
-				quietly replace `cont' = (`gvar' > `t' | `gvar' == 0 | `gvar' == `g') if `touse'
+
+				if `t' < `g' {
+					* pre-period: never-treated + cohort g + cohorts treated after g
+					quietly replace `cont' = (`gvar' == 0 | `gvar' == `g' | `gvar' > `g') if `touse'
+				}
+				else {
+					* post-period: never-treated + cohort g + cohorts treated after g
+					* and still untreated at time t
+					quietly replace `cont' = (`gvar' == 0 | `gvar' == `g' | (`gvar' > `g' & `gvar' > `t')) if `touse'
+				}
+
 				quietly count if `touse' & f`t' & `cont'
 				if r(N) == 0 continue
 
@@ -1683,7 +1693,7 @@ program define lwdid_large, eclass
                 Nobs_m    = rows(IF_mat)
                 n_cells_m = cols(IF_mat)
 
-                // Build aggregated IF for each event time r
+             * --- Build aggregated IF for each event time r
                 IF_r = J(Nobs_m, n_vr, 0)
 
                 for (rv=1; rv<=n_vr; rv++) {
@@ -1707,13 +1717,13 @@ program define lwdid_large, eclass
                     }
                 }
 
-                // Center the aggregated IF column by column
+             * --- Center the aggregated IF column by column
                 IF_r = IF_r :- J(rows(IF_r), 1, 1) * (colsum(IF_r) / rows(IF_r))
 
                 reps_m = `reps'
                 n_cl   = `n_clusters'
 
-                // Star bootstrap draws: only the fluctuation part
+             * --- Star bootstrap draws: only the fluctuation part
                 BS_star = J(reps_m, n_vr, .)
 
                 for (rep=1; rep<=reps_m; rep++) {
@@ -1723,7 +1733,7 @@ program define lwdid_large, eclass
                     BS_star[rep,.] = colsum(IF_r :* xi_i)
                 }
 
-                // What gets plotted / reported depends on rolling()
+             * --- What gets plotted / reported depends on rolling()
                 WATT_plot = WATT_pmat[,2]
                 BS_plot   = BS_star
 
@@ -1742,7 +1752,7 @@ program define lwdid_large, eclass
                     }
                 }
 
-                // Append plotting/reporting estimand as third column
+              * --- Append plotting/reporting estimand as third column
                 WATT_pmat = WATT_pmat, WATT_plot
             }
 
@@ -1833,12 +1843,12 @@ program define lwdid_large, eclass
 
             di as txt "-> WATT(r) with Wild Bootstrap `level'% CI  (star bootstrap, reps=`reps')"
             di as txt "------------------------------------------------------------"
-			if "`rolling'" == "demean" {
-			                list ryear watt_norm se lower_ci upper_ci N_cohort N_units, noobs
-			            }
-			            else {
-			                list ryear watt se lower_ci upper_ci N_cohort N_units, noobs
-			            }
+            if "`rolling'" == "demean" {
+                list ryear watt se lower_ci upper_ci watt_norm lower_ci_norm upper_ci_norm N_cohort N_units weight, noobs
+            }
+            else {
+                list ryear watt se lower_ci upper_ci N_cohort N_units weight, noobs
+            }
 
             if "`save'" != "" {
                 qui keep ryear ///
