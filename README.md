@@ -339,7 +339,7 @@ But, similarly, you can customize your graphs with `gopts` and `scheme` options:
 
 ```stata
 lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year) ///
-      rolling(detrend) method(ipwra) save(myresult4) graph scheme(s2color) ///
+      rolling(detrend) method(ipwra) save(myresult) graph scheme(s2color) ///
       gopts( ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart opening on ln(Wholesale Emp)") ///
 				ylabel(-.4(.1).25, format(%3.1f) angle(horizontal)) ///
              graphregion(color(white)) plotregion(color(white)) )		
@@ -347,8 +347,13 @@ lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year) ///
 In this example:
 
 * `gopts()` adds custom titles and axis labels.
-* `scheme(s1color)` changes the graph color scheme.
-> For a black-and-white version suitable for journal submissions, you can use `scheme(s1mono)`.
+* `scheme()` changes the graph color scheme.
+> For a black-and-white version suitable for journal submissions, you can use scheme(s2mono).
+> `graphregion(color(white)) plotregion(color(white))` replace the default gray background in `scheme(s2color)` with a clean white background, which is often preferred for presentations and publication-quality figures.
+
+By default, the graph reports **simultaneous confidence bands**, which account for joint uncertainty across all event times, $r$. 
+
+These bands are constructed using a multiplier bootstrap and are typically wider than pointwise intervals because they control coverage over the entire event-study path. If pointwise confidence intervals are preferred, you can use the option `ci(pointwise).`
 
 <div align="center">
 <img src="subfolder/ex7-new.png">
@@ -358,7 +363,7 @@ The option `save(myresult)` also creates a new dataset `myresult.dta` in your wo
 This file contains:
 
 * weighted ATT estimates across relative time,
-* corresponding **standard errors** and **confidence intervals** (computed via wild bootstrap),
+* corresponding **standard errors** and **confidence bands** (computed via a multiplier bootstrap using wild weights),
 * `N_cohort`: the number of treated cohorts used compute the estimates.
 * `N_units`: the total number of units included in the WATT estimation sample.
 
