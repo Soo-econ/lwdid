@@ -338,9 +338,11 @@ But, similarly, you can customize your graphs with `gopts` and `scheme` options:
 ### [Example 2] Customizing graphs and saving results
 
 ```stata
-lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year)  ///
-      rolling(detrend) method(ipwra) save(myresult) graph scheme(s1color) ///
-      gopts(ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart opening on ln(Wholesale Emp)"))  
+lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year) ///
+      rolling(detrend) method(ipwra) save(myresult4) graph scheme(s2color) ///
+      gopts( ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart opening on ln(Wholesale Emp)") ///
+				ylabel(-.4(.1).25, format(%3.1f) angle(horizontal)) ///
+             graphregion(color(white)) plotregion(color(white)) )		
 ```
 In this example:
 
@@ -349,7 +351,7 @@ In this example:
 > For a black-and-white version suitable for journal submissions, you can use `scheme(s1mono)`.
 
 <div align="center">
-<img src="subfolder/ex7.png">
+<img src="subfolder/ex7-new.png">
 </div>
 
 The option `save(myresult)` also creates a new dataset `myresult.dta` in your working directory.
