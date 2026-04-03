@@ -1,12 +1,14 @@
-
 # lwdid
 
 A Stata package that implements the **Rolling Difference-in-Differences Estimator** proposed by Lee and Wooldridge ([2025a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518), [2025b](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)). It provides fast and flexible estimation for staggered and common timing treatment settings in panel data, and offers a unified implementation that covers both standard large-N asymptotic settings and cases with small cross-sectional sample sizes, where conventional large-N inference may not be reliable.
 
-`lwdid` is a user-written Stata command freely available for academic and research use. 
-> A manuscript describing the `lwdid` method and software in detail is currently in preparation: <br> Soo Jeong Lee and Jeffrey M. Wooldridge (2025c), “*Rolling Difference-in-Differences Estimation for Small and Large Panels,*” working paper.
+`lwdid` is a user-written Stata command freely available for academic and research use.
+
+A companion manuscript describing the method and software is available at SSRN:  
+Soo Jeong Lee and Jeffrey M. Wooldridge ([2025c](https://dx.doi.org/10.2139/ssrn.6502558)), *Rolling Difference-in-Differences Estimation for Small and Large Panels*.  
 
 <br>
+
 
 # ⚠️ Latest version of `lwdid.ado`: version 2.1 (04/02/2026)
 
@@ -33,6 +35,11 @@ Soo Jeong Lee, and Jeffrey M. Wooldridge (2025b),
 "_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
 Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
 > Under review
+
+**lwdid: command guidance** <br>
+Soo Jeong Lee, and Jeffrey M. Wooldridge (2025c),
+"_Rolling Difference-in-Differences Estimation for Small and Large Panels,"
+Working Paper_, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
 
 <br>
 
