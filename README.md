@@ -353,7 +353,7 @@ In this example:
 
 By default, the graph reports **simultaneous confidence bands**, which account for joint uncertainty across all event times, $r$. 
 
-These bands are constructed using a multiplier bootstrap and are typically wider than pointwise intervals because they control coverage over the entire event-study path. If pointwise confidence intervals are preferred, you can use the option `ci(pointwise).`
+These bands are constructed using a multiplier bootstrap and are typically wider than pointwise intervals because they control coverage over the entire event-study path.
 
 <div align="center">
 <img src="subfolder/ex7-new.png">
