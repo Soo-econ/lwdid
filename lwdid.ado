@@ -1,6 +1,6 @@
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.1 April 2 2026
+*! version 2.1 March 30 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 *! https://github.com/Soo-econ/lwdid.git  [Readme]
@@ -57,6 +57,7 @@ program define lwdid, eclass sortpreserve
 		local y    : word 1 of `varlist'
 		local xlist: list varlist - y       
 
+			
 		*-- rolling() check  (small-N adds demeanq/detrendq)
 		local rolling = lower("`rolling'")
 		if "`small'" != "" {
@@ -1077,26 +1078,26 @@ program define lwdid_small_staggered, eclass
 			local tpost1 = r(min)
 
 			qui regress ydot_bar d_ if `timevar'==`tpost1'
-			}
+    }
 
-			di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
+    di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
 
-			regress ydot_bar d_ if `timevar' == `gmin'
-			matrix b = e(b)
-			matrix V = e(V)
+    regress ydot_bar d_ if `timevar' == `gmin'
+    matrix b = e(b)
+    matrix V = e(V)
 
-			ereturn post b V
-			ereturn scalar att = _b[d_]
-			ereturn scalar se_att = _se[d_]
-			ereturn local cmd     "lwdid"
-			ereturn local depvar  "`y'"
-			ereturn local rolling "`rolling'"
+    ereturn post b V
+    ereturn scalar att = _b[d_]
+    ereturn scalar se_att = _se[d_]
+    ereturn local cmd     "lwdid"
+    ereturn local depvar  "`y'"
+    ereturn local rolling "`rolling'"
 
-			di as res "lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
-					  "   SE = " %9.3f e(se_att)
+    di as res "lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
+              "   SE = " %9.3f e(se_att)
 
-			restore
-		end
+    restore
+end
 
 **# [4] lwdid_large
 **>> Subroutine for the LARGE-N (Common&staggered)
@@ -1129,6 +1130,7 @@ program define lwdid_large, eclass
 		local y    : word 1 of `varlist'
 		local xlist: list varlist - y
 		local rolling = lower("`rolling'")
+
 		local method  = lower("`method'") 
 			local method = lower("`method'")
 			*-- large-N: method required
@@ -1144,7 +1146,11 @@ program define lwdid_large, eclass
 				di as err "method(`method') requires covariates."
 				exit 198
 			}
-
+			
+			*--- Confidence bands
+			local ci_type "simultaneous"
+			
+			
 		* --- Internal numeric id for large-N computations (xtset-safe) / keep original id as well.
 			local id_orig `ivar'
 			tempvar __id
@@ -1293,7 +1299,7 @@ program define lwdid_large, eclass
 			 } 
 			 
 	 
-		* --- Stage 2: ATT(g,t) point estimates + Influence Functions
+	* --- Stage 2: ATT(g,t) point estimates + Influence Functions
 			quietly {
 					preserve
 					keep if `touse' & `gvar' > 0
@@ -1351,9 +1357,9 @@ program define lwdid_large, eclass
 				qui gen byte `esamp_gt' = 0 if `touse'
 				qui gen byte `psamp_gt' = 0 if `touse'
 
-
-			* ---  Propensity score estimation and ATT weights
-
+				* ------------------------------------------------------------
+				* Propensity score estimation and ATT weights
+				* ------------------------------------------------------------
 				if inlist("`method'", "ipw", "ipwra") {
 					tempvar p_hat_gt ipw_gt
 
@@ -1368,8 +1374,9 @@ program define lwdid_large, eclass
 						if `psamp_gt'
 				}
 
-			* ---  Point estimation: ATT(g,t)
-
+				* ------------------------------------------------------------
+				* Point estimation: ATT(g,t)
+				* ------------------------------------------------------------
 				if "`method'" == "ra" {
 					if "`xlist'" == "" {
 						qui regress `yvar' `dvar_g' if `touse' & f`t' & `cont'
@@ -1406,17 +1413,17 @@ program define lwdid_large, eclass
 
 				qui replace `esamp_gt' = e(sample)
 
-
-		* ---  Store point estimate
-
+		* ------------------------------------------------------------
+		* Store point estimate
+		* ------------------------------------------------------------
 		qui tempname b_att
 		if inlist("`method'", "ra", "ipw", "ipwra") scalar `b_att' = _b[`dvar_g']
 		else                                         scalar `b_att' = _b[ATET:r1vs0.`dvar_g']
 		post `pf' (`g') (`t') (`r') (`b_att')
 
-
-		* ---  Influence function
--
+		* ------------------------------------------------------------
+		* Influence function
+		* ------------------------------------------------------------
 		if inlist("`method'", "ra", "ipw", "ipwra") {
 
 			tempvar IF_gt
@@ -1743,7 +1750,7 @@ program define lwdid_large, eclass
                     }
                 }
 
-          * --- Append plotting/reporting estimand as third column
+           * --- Append plotting/reporting estimand as third column
                 WATT_pmat = WATT_pmat, WATT_plot
             }
 
@@ -1753,7 +1760,7 @@ program define lwdid_large, eclass
             mata: st_numscalar("n_vr_sc", n_vr_sc)
             local n_vr = n_vr_sc
 
-            * point estimates and SE
+            * point estimates and pointwise standard errors
             forvalues col = 1/`n_vr' {
                 mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
                 mata: st_numscalar("theta_raw_sc",  WATT_pmat[`col', 2])
@@ -1766,35 +1773,37 @@ program define lwdid_large, eclass
                 local se_plot_`col'    = se_plot_sc
             }
 
-            mata {
-                se_vec  = sqrt(diagonal(variance(BS_plot)))  // column vector
-                reps_bs = rows(BS_plot)
-                n_cols  = cols(BS_plot)
-                T_star  = J(reps_bs, 1, .)
-                for (b = 1; b <= reps_bs; b++) {
-                    z_b = J(1, n_cols, 0)
-                    for (j = 1; j <= n_cols; j++) {
-                        if (se_vec[j] > 0 & se_vec[j] < .) {
-                            z_b[j] = abs(BS_plot[b,j] / se_vec[j])
+            if "`ci_type'" == "simultaneous" {
+                mata {
+                    se_vec  = sqrt(diagonal(variance(BS_plot)))  // column vector
+                    reps_bs = rows(BS_plot)
+                    n_cols  = cols(BS_plot)
+                    T_star  = J(reps_bs, 1, .)
+                    for (b = 1; b <= reps_bs; b++) {
+                        z_b = J(1, n_cols, 0)
+                        for (j = 1; j <= n_cols; j++) {
+                            if (se_vec[j] > 0 & se_vec[j] < .) {
+                                z_b[j] = abs(BS_plot[b,j] / se_vec[j])
+                            }
                         }
+                        T_star[b] = max(z_b)
                     }
-                    T_star[b] = max(z_b)
+                    T_sort = sort(T_star, 1)
+                    nT     = rows(T_sort)
+                    q_idx  = min((nT, max((1, ceil((1-`alpha') * nT)))))
+                    st_numscalar("c_sup_sc", T_sort[q_idx])
                 }
-                T_sort = sort(T_star, 1)
-                nT     = rows(T_sort)
-                q_idx  = min((nT, max((1, ceil((1-`alpha') * nT)))))
-                st_numscalar("c_sup_sc", T_sort[q_idx])
-            }
-            local c_sup = c_sup_sc
+                local c_sup = c_sup_sc
 
-            if "`c_sup'" == "" | "`c_sup'" == "." {
-                di as error "Failed to compute simultaneous critical value."
-                exit 198
-            }
+                if "`c_sup'" == "" | "`c_sup'" == "." {
+                    di as error "Failed to compute simultaneous critical value."
+                    exit 198
+                }
 
-            forvalues col = 1/`n_vr' {
-                local lo_ci_plot_`col' = `theta_plot_`col'' - `c_sup' * `se_plot_`col''
-                local hi_ci_plot_`col' = `theta_plot_`col'' + `c_sup' * `se_plot_`col''
+                forvalues col = 1/`n_vr' {
+                    local lo_ci_plot_`col' = `theta_plot_`col'' - `c_sup' * `se_plot_`col''
+                    local hi_ci_plot_`col' = `theta_plot_`col'' + `c_sup' * `se_plot_`col''
+                }
             }
 
                    preserve
@@ -1871,7 +1880,7 @@ program define lwdid_large, eclass
 
         format low_ci up_ci %9.3f
 
-        list ryear watt se low_ci up_ci N_cohort N_units , noobs
+        list ryear watt se low_ci up_ci N_cohort N_units weight, noobs
 
 
 
@@ -1961,30 +1970,30 @@ program define lwdid_large, eclass
         }
 		
 * --- save
-		 if "`save'" != "" {
-					qui keep ryear ///
-						watt se low_ci up_ci ///
-						N_cohort N_units
+ if "`save'" != "" {
+            qui keep ryear ///
+                watt se low_ci up_ci ///
+                N_cohort N_units
 
-					qui order ryear ///
-						watt se low_ci up_ci ///
-						N_cohort N_units
-					
-					* reset display format before saving
-					format watt se low_ci up_ci %9.0g
+            qui order ryear ///
+                watt se low_ci up_ci ///
+                N_cohort N_units
+            
+            * reset display format before saving
+            format watt se low_ci up_ci %9.0g
 
-					qui save "`save'", replace
-				}		
-					restore
-								
-								
-					quietly {
-						mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star BS_plot WATT_plot
-						mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m
-						capture mata: mata drop T_star T_sort se_vec
-					}
-				}
-			end
+            qui save "`save'", replace
+        }		
+			restore
+						
+						
+			quietly {
+				mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star BS_plot WATT_plot
+				mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m
+				capture mata: mata drop T_star T_sort se_vec
+			}
+		}
+	end
 
 
 **# RI
