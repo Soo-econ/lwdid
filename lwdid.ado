@@ -1880,7 +1880,7 @@ program define lwdid_large, eclass
 
         format low_ci up_ci %9.3f
 
-        list ryear watt se low_ci up_ci N_cohort N_units weight, noobs
+        list ryear watt se low_ci up_ci N_cohort N_units , noobs
 
 
 
