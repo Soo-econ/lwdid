@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1 27MAR2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
+{* *! version 2.1 2APR2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
 {viewerjumpto "Syntax" "lwdid##syntax"}{...}
 {viewerjumpto "Description" "lwdid##description"}{...}
 {viewerjumpto "Options" "lwdid##options"}{...}
@@ -188,7 +188,7 @@ Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.5325686":SS
 {pstd}
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026b), 
 "Rolling Difference-in-Differences Estimation for Small and Large Panels,"  
-Working Paper, Available at SSRN 6481238
+Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.6502558":SSRN 6502558}
 
 
 
