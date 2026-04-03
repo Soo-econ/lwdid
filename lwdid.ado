@@ -1,6 +1,6 @@
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.1 March 30 2026
+*! version 2.1 April 2 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 *! https://github.com/Soo-econ/lwdid.git  [Readme]
@@ -56,7 +56,6 @@ program define lwdid, eclass sortpreserve
 		*-- parse varlist
 		local y    : word 1 of `varlist'
 		local xlist: list varlist - y       
-
 
 		*-- rolling() check  (small-N adds demeanq/detrendq)
 		local rolling = lower("`rolling'")
@@ -227,7 +226,7 @@ program define lwdid_small_single, eclass
 		replace `post_' = . if !`touse'
 		di as txt "------------------------------------------------------------"
 		di as txt "gvar(): single cohort detected -> common timing"
-		di as txt "lwdid [small-N mode]  rolling=`rolling'  method=ols"
+		di as txt "lwdid [small-N mode]  rolling=`rolling'  method=ols  ci=`ci'"
 		di as txt "------------------------------------------------------------"
 
 
@@ -1078,26 +1077,26 @@ program define lwdid_small_staggered, eclass
 			local tpost1 = r(min)
 
 			qui regress ydot_bar d_ if `timevar'==`tpost1'
-    }
+			}
 
-    di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
+			di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
 
-    regress ydot_bar d_ if `timevar' == `gmin'
-    matrix b = e(b)
-    matrix V = e(V)
+			regress ydot_bar d_ if `timevar' == `gmin'
+			matrix b = e(b)
+			matrix V = e(V)
 
-    ereturn post b V
-    ereturn scalar att = _b[d_]
-    ereturn scalar se_att = _se[d_]
-    ereturn local cmd     "lwdid"
-    ereturn local depvar  "`y'"
-    ereturn local rolling "`rolling'"
+			ereturn post b V
+			ereturn scalar att = _b[d_]
+			ereturn scalar se_att = _se[d_]
+			ereturn local cmd     "lwdid"
+			ereturn local depvar  "`y'"
+			ereturn local rolling "`rolling'"
 
-    di as res "lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
-              "   SE = " %9.3f e(se_att)
+			di as res "lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
+					  "   SE = " %9.3f e(se_att)
 
-    restore
-end
+			restore
+		end
 
 **# [4] lwdid_large
 **>> Subroutine for the LARGE-N (Common&staggered)
@@ -1145,7 +1144,6 @@ program define lwdid_large, eclass
 				di as err "method(`method') requires covariates."
 				exit 198
 			}
-
 
 		* --- Internal numeric id for large-N computations (xtset-safe) / keep original id as well.
 			local id_orig `ivar'
@@ -1295,7 +1293,7 @@ program define lwdid_large, eclass
 			 } 
 			 
 	 
-	* --- Stage 2: ATT(g,t) point estimates + Influence Functions
+		* --- Stage 2: ATT(g,t) point estimates + Influence Functions
 			quietly {
 					preserve
 					keep if `touse' & `gvar' > 0
@@ -1353,9 +1351,9 @@ program define lwdid_large, eclass
 				qui gen byte `esamp_gt' = 0 if `touse'
 				qui gen byte `psamp_gt' = 0 if `touse'
 
-				* ------------------------------------------------------------
-				* Propensity score estimation and ATT weights
-				* ------------------------------------------------------------
+
+			* ---  Propensity score estimation and ATT weights
+
 				if inlist("`method'", "ipw", "ipwra") {
 					tempvar p_hat_gt ipw_gt
 
@@ -1370,9 +1368,8 @@ program define lwdid_large, eclass
 						if `psamp_gt'
 				}
 
-				* ------------------------------------------------------------
-				* Point estimation: ATT(g,t)
-				* ------------------------------------------------------------
+			* ---  Point estimation: ATT(g,t)
+
 				if "`method'" == "ra" {
 					if "`xlist'" == "" {
 						qui regress `yvar' `dvar_g' if `touse' & f`t' & `cont'
@@ -1409,17 +1406,17 @@ program define lwdid_large, eclass
 
 				qui replace `esamp_gt' = e(sample)
 
-		* ------------------------------------------------------------
-		* Store point estimate
-		* ------------------------------------------------------------
+
+		* ---  Store point estimate
+
 		qui tempname b_att
 		if inlist("`method'", "ra", "ipw", "ipwra") scalar `b_att' = _b[`dvar_g']
 		else                                         scalar `b_att' = _b[ATET:r1vs0.`dvar_g']
 		post `pf' (`g') (`t') (`r') (`b_att')
 
-		* ------------------------------------------------------------
-		* Influence function
-		* ------------------------------------------------------------
+
+		* ---  Influence function
+-
 		if inlist("`method'", "ra", "ipw", "ipwra") {
 
 			tempvar IF_gt
@@ -1746,42 +1743,59 @@ program define lwdid_large, eclass
                     }
                 }
 
-              * --- Append plotting/reporting estimand as third column
+          * --- Append plotting/reporting estimand as third column
                 WATT_pmat = WATT_pmat, WATT_plot
             }
 
             local alpha  = (100 - `level') / 100
-            local lo_pct = `alpha' / 2 * 100
-            local hi_pct = (1 - `alpha' / 2) * 100
 
             mata: n_vr_sc = rows(WATT_pmat)
             mata: st_numscalar("n_vr_sc", n_vr_sc)
             local n_vr = n_vr_sc
 
-			quietly forval col = 1/`n_vr' {
-				mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
-				mata: st_numscalar("theta_raw_sc",  WATT_pmat[`col', 2])
-				mata: st_numscalar("theta_plot_sc", WATT_pmat[`col', 3])
-				mata: st_numscalar("se_plot_sc", sqrt(variance(BS_plot[., `col'])))
+            * point estimates and SE
+            forvalues col = 1/`n_vr' {
+                mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
+                mata: st_numscalar("theta_raw_sc",  WATT_pmat[`col', 2])
+                mata: st_numscalar("theta_plot_sc", WATT_pmat[`col', 3])
+                mata: st_numscalar("se_plot_sc", sqrt(variance(BS_plot[., `col'])))
 
-				mata: bs_sort = sort(BS_plot[., `col'], 1)
-				mata: n_bs = rows(bs_sort)
-				mata: lo_idx = max((1, floor(n_bs * `lo_pct' / 100)))
-				mata: hi_idx = min((n_bs, ceil(n_bs * `hi_pct' / 100)))
+                local rv_`col'         = rv_sc
+                local theta_raw_`col'  = theta_raw_sc
+                local theta_plot_`col' = theta_plot_sc
+                local se_plot_`col'    = se_plot_sc
+            }
 
-				mata: st_numscalar("q_lo_sc", bs_sort[lo_idx,1])
-				mata: st_numscalar("q_hi_sc", bs_sort[hi_idx,1])
+            mata {
+                se_vec  = sqrt(diagonal(variance(BS_plot)))  // column vector
+                reps_bs = rows(BS_plot)
+                n_cols  = cols(BS_plot)
+                T_star  = J(reps_bs, 1, .)
+                for (b = 1; b <= reps_bs; b++) {
+                    z_b = J(1, n_cols, 0)
+                    for (j = 1; j <= n_cols; j++) {
+                        if (se_vec[j] > 0 & se_vec[j] < .) {
+                            z_b[j] = abs(BS_plot[b,j] / se_vec[j])
+                        }
+                    }
+                    T_star[b] = max(z_b)
+                }
+                T_sort = sort(T_star, 1)
+                nT     = rows(T_sort)
+                q_idx  = min((nT, max((1, ceil((1-`alpha') * nT)))))
+                st_numscalar("c_sup_sc", T_sort[q_idx])
+            }
+            local c_sup = c_sup_sc
 
-				mata: st_numscalar("lo_ci_plot_sc", st_numscalar("theta_plot_sc") - st_numscalar("q_hi_sc"))
-				mata: st_numscalar("hi_ci_plot_sc", st_numscalar("theta_plot_sc") - st_numscalar("q_lo_sc"))
+            if "`c_sup'" == "" | "`c_sup'" == "." {
+                di as error "Failed to compute simultaneous critical value."
+                exit 198
+            }
 
-				local rv_`col'          = rv_sc
-				local theta_raw_`col'   = theta_raw_sc
-				local theta_plot_`col'  = theta_plot_sc
-				local se_plot_`col'     = se_plot_sc
-				local lo_ci_plot_`col'  = lo_ci_plot_sc
-				local hi_ci_plot_`col'  = hi_ci_plot_sc
-			}
+            forvalues col = 1/`n_vr' {
+                local lo_ci_plot_`col' = `theta_plot_`col'' - `c_sup' * `se_plot_`col''
+                local hi_ci_plot_`col' = `theta_plot_`col'' + `c_sup' * `se_plot_`col''
+            }
 
                    preserve
             qui use "`WATT_point'", clear
@@ -1815,59 +1829,52 @@ program define lwdid_large, eclass
             qui replace lower_ci = lower_ci_plot
             qui replace upper_ci = upper_ci_plot
 
-            if "`rolling'" == "demean" {
-                qui su watt if ryear == -1, meanonly
-                local base = r(mean)
-                qui replace base_rminus1  = `base'
-                qui replace watt_norm     = watt_plot
-                qui replace lower_ci_norm = lower_ci_plot
-                qui replace upper_ci_norm = upper_ci_plot
+        if "`rolling'" == "demean" {
+            qui su watt if ryear == -1, meanonly
+            local base = r(mean)
+            qui replace base_rminus1  = `base'
+            qui replace watt_norm     = watt_plot
+            qui replace lower_ci_norm = lower_ci_plot
+            qui replace upper_ci_norm = upper_ci_plot
 
-                * force exact zero at r = -1 for display after normalized inference
-                qui replace watt_norm     = 0 if ryear == -1
-                qui replace lower_ci_norm = 0 if ryear == -1
-                qui replace upper_ci_norm = 0 if ryear == -1
-            }
+            * force exact zero at r = -1 for display after normalized inference
+            qui replace watt_norm     = 0 if ryear == -1
+            qui replace lower_ci_norm = 0 if ryear == -1
+            qui replace upper_ci_norm = 0 if ryear == -1
 
-            sort ryear
-            
-            format watt se lower_ci upper_ci %9.3f
-            format watt_plot se_plot lower_ci_plot upper_ci_plot %9.3f
-            format watt_norm lower_ci_norm upper_ci_norm %9.3f
+            * finalized results for demean: keep normalized series
+            qui replace watt     = watt_norm
+            qui replace lower_ci = lower_ci_norm
+            qui replace upper_ci = upper_ci_norm
+        }
+        else {
+            * finalized results for non-demean cases: keep plotted series
+            qui replace watt     = watt_plot
+            qui replace lower_ci = lower_ci_plot
+            qui replace upper_ci = upper_ci_plot
+        }
 
-            di as txt "-> WATT(r) with Wild Bootstrap `level'% CI  (star bootstrap, reps=`reps')"
-            di as txt "------------------------------------------------------------"
-            if "`rolling'" == "demean" {
-                list ryear watt se lower_ci upper_ci watt_norm lower_ci_norm upper_ci_norm N_cohort N_units weight, noobs
-            }
-            else {
-                list ryear watt se lower_ci upper_ci N_cohort N_units weight, noobs
-            }
+        * finalized standard errors
+        qui replace se = se_plot
 
-            if "`save'" != "" {
-                qui keep ryear ///
-                    watt se lower_ci upper_ci ///
-                    watt_plot se_plot lower_ci_plot upper_ci_plot ///
-                    watt_norm lower_ci_norm upper_ci_norm ///
-                    base_rminus1 ///
-                    N_cohort N_units
+        sort ryear
 
-                qui order ryear ///
-                    watt se lower_ci upper_ci ///
-                    watt_plot se_plot lower_ci_plot upper_ci_plot ///
-                    watt_norm lower_ci_norm upper_ci_norm ///
-                    base_rminus1 ///
-                    N_cohort N_units
-                
-                * reset display format before saving
-                format watt se lower_ci upper_ci %9.0g
-                format watt_plot se_plot lower_ci_plot upper_ci_plot %9.0g
-                format watt_norm lower_ci_norm upper_ci_norm %9.0g
-                format base_rminus1 %9.0g
+        format watt se lower_ci upper_ci %9.3f
 
-                qui save "`save'", replace
-            }
-				
+		di as txt "-> WATT(r) with simultaneous `level'% confidence bands  (bootstrap, B=`reps')"
+        di as txt "------------------------------------------------------------"
+
+        * temporary variables for cleaner reporting only
+        capture drop low_ci up_ci
+        qui gen low_ci = lower_ci
+        qui gen up_ci  = upper_ci
+
+        format low_ci up_ci %9.3f
+
+        list ryear watt se low_ci up_ci N_cohort N_units , noobs
+
+
+
 * --- Graph
         if "`graph'" != "" {
                 if "`title'" == "" local title "lwdid: `method' (`rolling')"
@@ -1878,10 +1885,10 @@ program define lwdid_large, eclass
                 local xrange = `xmax' - `xmin'
                 local xstep = cond(`xrange'>40, 10, 5)
 
-                * y-axis range based on plotted confidence intervals
-                qui su upper_ci_plot if !missing(upper_ci_plot), meanonly
+                * y-axis range based on finalized confidence intervals
+                qui su upper_ci if !missing(upper_ci), meanonly
                 local yhi = r(max)
-                qui su lower_ci_plot if !missing(lower_ci_plot), meanonly
+                qui su lower_ci if !missing(lower_ci), meanonly
                 local ylo = r(min)
 
                 if (`yhi' - `ylo') < 0.2 {
@@ -1889,8 +1896,11 @@ program define lwdid_large, eclass
                     local yhi  = `ymid' + 0.1
                     local ylo  = `ymid' - 0.1
                 }
-                local yhi = `yhi' + 0.1
-                local ylo = `ylo' - 0.1
+
+                * 5% margin instead of fixed 0.1 to avoid over-expanding y axis
+                local ymargin = max(0.02, (`yhi' - `ylo') * 0.05)
+                local yhi = `yhi' + `ymargin'
+                local ylo = `ylo' - `ymargin'
                 local raw_step = (`yhi' - `ylo') / 6
                 local ystep = 1
                 foreach s in 0.01 0.02 0.05 0.1 0.2 0.25 0.5 1 2 5 10 {
@@ -1902,10 +1912,8 @@ program define lwdid_large, eclass
                 if `ystep' < 0.1 local ystep = 0.1
                 local ymin = floor(`ylo'/`ystep')*`ystep'
                 local ymax = ceil(`yhi'/`ystep')*`ystep'
-				
-**## twoway [Large N]
 
-                               * mono scheme detection
+                * mono scheme detection
                 local mono = strpos("`scheme'","mono")
                 if `mono' {
                     local col_pre black%50
@@ -1929,15 +1937,15 @@ program define lwdid_large, eclass
                 }
 
                 twoway ///
-                    (rcap lower_ci_plot upper_ci_plot ryear if ryear < 0, ///
+                    (rcap lower_ci upper_ci ryear if ryear < 0, ///
                         lwidth(0.3) lcolor(`col_pre'%50)) ///
-                    (rcap lower_ci_plot upper_ci_plot ryear if ryear >= 0, ///
+                    (rcap lower_ci upper_ci ryear if ryear >= 0, ///
                         lwidth(0.3) lcolor(`col_post'%60)) ///
-                    (line watt_plot ryear, ///
+                    (line watt ryear, ///
                         lcolor(gs8) lwidth(thin)) ///
-                    (scatter watt_plot ryear if ryear < 0, ///
+                    (scatter watt ryear if ryear < 0, ///
                         mcolor(`mcol_pre') msymbol(circle) msize(medlarge)) ///
-                    (scatter watt_plot ryear if ryear >= 0, ///
+                    (scatter watt ryear if ryear >= 0, ///
                         mcolor(`mcol_post') msymbol(circle) msize(medlarge)) ///
                     , ///
                     yline(0, lcolor(gs10)) ///
@@ -1951,15 +1959,32 @@ program define lwdid_large, eclass
                     scheme(`scheme') ///
                     `gopts'
         }
-			restore
-						
-						
-			quietly {
-				mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star BS_plot WATT_plot
-				mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m bs_sort n_bs lo_idx hi_idx
-			}
-		}
-	end
+		
+* --- save
+		 if "`save'" != "" {
+					qui keep ryear ///
+						watt se low_ci up_ci ///
+						N_cohort N_units
+
+					qui order ryear ///
+						watt se low_ci up_ci ///
+						N_cohort N_units
+					
+					* reset display format before saving
+					format watt se low_ci up_ci %9.0g
+
+					qui save "`save'", replace
+				}		
+					restore
+								
+								
+					quietly {
+						mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star BS_plot WATT_plot
+						mata: mata drop n_vr n_vr_sc Nobs_m n_cells_m
+						capture mata: mata drop T_star T_sort se_vec
+					}
+				}
+			end
 
 
 **# RI
