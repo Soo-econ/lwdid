@@ -1,6 +1,6 @@
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.1 April 2 2026
+*! version 2.1 April 16 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 *! https://github.com/Soo-econ/lwdid.git  [Readme]
@@ -950,7 +950,7 @@ program define lwdid_small_staggered, eclass
 			di as txt "------------------------------------------------------------"
 			di as err "graph option not yet supported for small-N staggered designs."
 			di as txt "This feature will be included in a future update of lwdid."
-			di as txt "Please run the command without the graph option."
+			di as txt "Please run the command **without the graph option.**"
 			di as txt "------------------------------------------------------------"
 			exit 198
 		}
@@ -1731,7 +1731,7 @@ program define lwdid_large, eclass
                     BS_star[rep,.] = colsum(IF_r :* xi_i)
                 }
 
-             * --- What gets plotted / reported depends on rolling()
+            * --- What gets plotted / reported depends on rolling()
                 WATT_plot = WATT_pmat[,2]
                 BS_plot   = BS_star
 
@@ -1749,8 +1749,17 @@ program define lwdid_large, eclass
                         BS_plot   = BS_star :- BS_star[,base_idx]
                     }
                 }
+                else if ("`rolling'" == "detrend") {
+			* --- r = -1 and r = -2 are anchored at 0; they are NOT estimation or inference targets--> excluded from the sup-t critical value
+                    for (rv=1; rv<=n_vr; rv++) {
+                        if (WATT_pmat[rv,1] == -1 | WATT_pmat[rv,1] == -2) {
+                            WATT_plot[rv]  = 0
+                            BS_plot[., rv] = J(rows(BS_plot), 1, 0)
+                        }
+                    }
+                }
 
-           * --- Append plotting/reporting estimand as third column
+            * --- Append plotting/reporting estimand as third column
                 WATT_pmat = WATT_pmat, WATT_plot
             }
 
