@@ -35,7 +35,7 @@
 {synoptline}
 
 {syntab:Main variables}
-{synopt:{it:varlist}}Outcome variable followed by optional covariates (x-variables). Covariates are included only if both treated and control groups satisfy N1 > K+1 and N0 > K+1.{p_end}
+{synopt:{it:varlist}}Outcome variable followed by optional covariates (x-variables). {p_end}
 
 {syntab:Required options}
 {synopt:{opt ivar(varname)}}Panel identifier (numeric or string).{p_end}
@@ -53,20 +53,20 @@
 {space 2}{bf:detrendm} removes the pre-treatment linear trend and month-of-year effects{p_end}
 
 {syntab:Required (depends on implementation)}
-{synopt:{opt method(ra|ipw|ipwra)}}{it:Large-N only.} 
-Estimation method for the large-N implementation: 
-{cmd:ra} (regression adjustment), {cmd:ipw} (inverse probability weighting), 
-or {cmd:ipwra} (doubly robust IPW-RA). 
+{synopt:{opt method(ra|ipw|ipwra)}}{it:Large-N only.} Specifies the large-N estimation method:{break}
+{cmd:ra} for regression adjustment {break}
+{cmd:ipw} for inverse probability weighting {break}
+{cmd:ipwra} for doubly robust IPW-RA. {break}
 Required unless {cmd:small} is specified.{p_end}
 
-{synopt:{opt small}}{it:Small-N only.} Requests the small-sample implementation designed for settings with few treated or few control units, or both.{p_end}
+{synopt:{opt small}}{it:Small-N only.} Specifies the small-sample implementation for settings with few treated units, few control units, or both.{p_end}
 
 {syntab:Optional options}
 {synopt:{opt save(filename)}}Save estimation results as a .dta file.{p_end}
 
-{synopt:{opt graph}}Display graphical results.{break}
-Large-N: weighted ATT estimates by relative time.{break}
-Small-N: treated vs. control means of residualized outcomes over time.{p_end}
+{synopt:{opt graph}}Displays graphical results.{break}
+Large-N: plots weighted ATT estimates by relative time.{break}
+Small-N: plots treated and control means of residualized outcomes over time.{p_end}
 
 {synopt:{opt gopts(string)}}Additional {cmd:twoway} graph options (only with {cmd:graph}).{p_end}
 
@@ -76,11 +76,11 @@ Small-N: treated vs. control means of residualized outcomes over time.{p_end}
 
 {synopt:{opt reps(#)}}{it:Large-N only.} Number of bootstrap replications for large-N inference (default = 999).{p_end}
 
-{synopt:{opt ri}}{it:Small-N only.}Perform randomization inference (RI).{p_end}
+{synopt:{opt ri}}{it:Small-N only.} Perform randomization inference (RI).{p_end}
 
-{synopt:{opt rireps(#)}}{it:Small-N only.}Number of RI repetitions (default = 999).{p_end}
+{synopt:{opt rireps(#)}}{it:Small-N only.} Number of RI repetitions (default = 999).{p_end}
 
-{synopt:{opt riseed(#)}}{it:Small-N only.}Seed for RI reproducibility (default: randomly drawn).{p_end}
+{synopt:{opt riseed(#)}}{it:Small-N only.} Seed for RI reproducibility (default: randomly drawn).{p_end}
 
 {synoptline}
 
@@ -102,26 +102,26 @@ using simple cross-sectional regressions in each post-treatment period,
 facilitating both overall and period-specific ATT estimation.
 
 {pstd}
-By default, {cmd:lwdid} implements the transformation-based Difference-in-Differences
-approach proposed in Lee and Wooldridge (2025). This approach is designed for
-panels with a large cross-sectional dimension and allows for heterogeneous treatment effects 
-and unit-specific heterogeneous linear trends.
+By default, {cmd:lwdid} uses the large-N procedure of Lee and Wooldridge (2025),
+which is designed for panels with a large cross-sectional dimension and allows for
+heterogeneous treatment effects and unit-specific heterogeneous linear trends.
 
 {pstd}
 When the cross-sectional dimension is small ({it:small-N}), conventional
-large-N asymptotic approximations may be unreliable. In such cases, specifying
-the {cmd:small} option applies the exact small-sample inference procedures
+large-N inference may be unreliable. In such settings, specifying
+the {cmd:small} option invokes the exact small-sample inference procedures
 developed in Lee and Wooldridge (2026a). The seasonal-adjustment options
-{cmd:demeanq}, {cmd:detrendq}, {cmd:demeanm}, and {cmd:detrendm} are currently
-implemented only in this small-N case.
+{cmd:demeanq}, {cmd:detrendq}, {cmd:demeanm}, and {cmd:detrendm} are currently available only under the small-N implementation.
 
 {pstd}
-A convenient feature of {cmd:lwdid} is that, based on the treatment cohort
-variable specified in {cmd:gvar()}, the command automatically detects
-whether the design involves a single treatment cohort (common timing) or
-multiple cohorts (staggered adoption) and applies the appropriate
-estimation procedure. The implementation is
-described in detail in Lee and Wooldridge (2026b).
+Based on the treatment cohort variable specified in {cmd:gvar()}, {cmd:lwdid}
+automatically detects whether the design involves a single treatment cohort
+(common timing) or multiple cohorts (staggered adoption) and applies the
+appropriate estimation procedure. 
+
+{pstd}
+Details of the implementation are given in
+Lee and Wooldridge (2026b).
 
 
 {marker examples}{...}
