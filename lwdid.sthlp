@@ -120,9 +120,9 @@ automatically detects whether the design involves a single treatment cohort
 appropriate estimation procedure. 
 
 {pstd}
-Details of the implementation are given in
-Lee and Wooldridge (2026b).
-
+Details of the implementation are given in Lee and Wooldridge (2026b); 
+see also the {browse "https://github.com/Soo-econ/lwdid":lwdid GitHub repository}
+for additional examples and documentation.
 
 {marker examples}{...}
 {title:Examples}
