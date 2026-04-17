@@ -10,7 +10,7 @@ Soo Jeong Lee and Jeffrey M. Wooldridge ([2026b](https://dx.doi.org/10.2139/ssrn
 <br>
 
 
-# ⚠️ Latest version of `lwdid.ado`: version 2.1 (04/02/2026)
+# ⚠️ Latest version of `lwdid.ado`: version 2.1 (04/16/2026)
 
 > We are currently preparing the package for submission, and updates may continue in the meantime.  
 > To ensure that you are using the most recent version, please reinstall the package following the instructions in this README and include the `, replace` option.  
