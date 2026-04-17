@@ -3,7 +3,7 @@ d lwdid: Rolling Difference-in-Differences Estimator for Small-N and Large-N Pan
 d Authors: Soo Jeong Lee (SIUC) and Jeffrey M. Wooldridge (MSU)
 d Contact: soojeong.lee [at] siu.edu, wooldri1 [at] msu.edu
 d https://github.com/Soo-econ/lwdid
-d Distribution-Date: 1APR2026
+d Distribution-Date: 16APR2026
 d
 d Requires: Stata 16+
 d
