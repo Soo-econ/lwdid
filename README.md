@@ -1,88 +1,43 @@
 # lwdid
 
-A Stata package that implements the **Rolling Difference-in-Differences Estimator** proposed by Lee and Wooldridge ([2025a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518), [2026a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)). It provides fast and flexible estimation for staggered and common timing treatment settings in panel data, and offers a unified implementation that covers both standard large-N asymptotic settings and cases with small cross-sectional sample sizes, where conventional large-N inference may not be reliable.
+A Stata package that implements the **Rolling Difference-in-Differences Estimator** proposed by Lee and Wooldridge ([2025a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518), [2026a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)). It provides fast and flexible estimation for staggered and common treatment timing in panel data, and offers a unified implementation that accomodates both standard large-N asymptotic settings and cases with small cross-sectional units, where conventional large-N inference may not be reliable.
 
 `lwdid` is a user-written Stata command freely available for academic and research use.
+> The package is now available on SSC: `ssc install lwdid`  
 
-A companion manuscript describing the method and software is available at SSRN:  
-Soo Jeong Lee and Jeffrey M. Wooldridge ([2026b](https://dx.doi.org/10.2139/ssrn.6502558)), *Rolling Difference-in-Differences Estimation for Small and Large Panels*.  
-
-<br>
-
-
-# ⚠️ Latest version of `lwdid.ado`: version 2.1 (04/16/2026)
-
-> We are currently preparing the package for submission, and updates may continue in the meantime.  
-> To ensure that you are using the most recent version, please reinstall the package following the instructions in this README and include the `, replace` option.  
-> After reinstalling, <br> run `which lwdid` to verify that the installed version is up to date.
-
-We will announce once `ssc install lwdid` becomes available.
-
-
-# Citation
-
-If you use `lwdid` in your research, please cite the following papers:
-
-**Large-N Procedure**<br>
-
-Soo Jeong Lee, and Jeffrey M. Wooldridge (2025a),
-"_A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data,"
-Working Paper_, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
-> Revise and resubmit at *Journal of Business & Economic Statistics*.
-
-**Small-N Procedure** <br>
-Soo Jeong Lee, and Jeffrey M. Wooldridge (2026a),
-"_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
-Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
-> Under review
-
-**lwdid: command guidance** <br>
-Soo Jeong Lee, and Jeffrey M. Wooldridge (2026b),
-"_Rolling Difference-in-Differences Estimation for Small and Large Panels,"
-Working Paper_, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
+A companion manuscript describing the method and software is available at SSRN: Lee and Wooldridge ([2026b](https://dx.doi.org/10.2139/ssrn.6502558)).
 
 <br>
 
 # Contents
-- [Citation](#citation)
 - [Installation](#installation)
 - [Syntax](#syntax)
 - [Examples: Small-N](#small-n-case)
 - [Examples: Large-N](#large-n-case)
 - [Contact and Updates](#contact-and-updates)
+- [Citation](#citation)
 
 <br>
 
 # Installation
 
-To install the latest version from GitHub, type the following command in Stata:
-
-```stata
-net describe lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/)
+You can install the package directly from SSC by running:
 ```
+ssc install lwdid
+``` 
+> To ensure that you are using the most recent version, run `which lwdid` to verify the installed version,
+>
+>or reinstall it using `ssc install lwdid, replace`.
 
- You should see a window like this:
- 
-![The Screenshot of results window](subfolder/ex1.png)
-
-Then, install the package:
+ To view the SSC package description, version, and metadata, run:
 ```
-net install lwdid, replace
-```
-The `replace` option overwrites any previously installed version of **lwdid**.
-
-To downlowd the accompanying example datasets for the manuscript replication or examples in the  [Examples](#examples) section, run:
-```
-net get lwdid, replace
+ssc describe lwdid
 ```
 
-Alternatively, you can install and download everything directly from GitHub in one step: 
+To view the help file and code description, please run:
 ```
-net install lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/) replace
-net get lwdid, from(https://raw.githubusercontent.com/Soo-econ/lwdid/main/) replace
+help lwdid
 ```
-If installation from within Stata fails, the files can be downloaded manually from [my GitHub page](https://github.com/Soo-econ/lwdid.git)
-
 
 <br>
 
@@ -380,11 +335,32 @@ This file contains:
 </div>
 
 
+# Citation
+
+If you use `lwdid` in your research, please cite the following papers:
+
+**Large-N Procedure**<br>
+
+Soo Jeong Lee, and Jeffrey M. Wooldridge (2025a),
+"_A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data,"
+Working Paper_, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
+> Revise and resubmit at *Journal of Business & Economic Statistics*.
+
+**Small-N Procedure** <br>
+Soo Jeong Lee, and Jeffrey M. Wooldridge (2026a),
+"_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
+Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
+> Under review
+
+**lwdid: command guidance** <br>
+Soo Jeong Lee, and Jeffrey M. Wooldridge (2026b),
+"_Rolling Difference-in-Differences Estimation for Small and Large Panels,"
+Working Paper_, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
+
+
 <br>
 
 ## Contact and Updates
-
-The `lwdid` package has been updated to **version 2.0**, implementing the procedures described in the accompanying papers and replicating their main results.
 
 Minor updates related to graph plotting (particularly for **Small-N: Staggered adoption** cases) are planned for upcoming releases — please stay tuned.
 
