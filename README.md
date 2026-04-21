@@ -33,6 +33,10 @@ ssc install lwdid
 ```
 ssc describe lwdid
 ```
+To download the package files provided through SSC, including example files, run:
+ ```
+net get lwdid  
+```
 
 To view the help file and code description, please run:
 ```
