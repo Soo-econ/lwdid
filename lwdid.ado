@@ -810,7 +810,7 @@ program define lwdid_small_single, eclass
 				`YL' ///
 				`XTITLE' ///
 				legend(order(1 "Treated" 2 "Control") ///
-					   pos(2) ring(0) col(2) ///
+					pos(11) ring(0) col(2)  ///
 					   region(lcolor(none))) ///
 				graphregion(color(white)) ///
 				plotregion(color(white)) ///
