@@ -1737,17 +1737,13 @@ program define lwdid_large, eclass
                 BS_plot   = BS_star
 
                 if ("`rolling'" == "demean") {
-                    base_idx = .
+				* --- r = -1 is anchored at 0; it is NOT an estimation or inference target
+				* --- and is excluded from the sup-t critical value by setting its bootstrap draw to zero.
                     for (rv=1; rv<=n_vr; rv++) {
                         if (WATT_pmat[rv,1] == -1) {
-                            base_idx = rv
-                            break
+                            WATT_plot[rv]  = 0
+                            BS_plot[., rv] = J(rows(BS_plot), 1, 0)
                         }
-                    }
-
-                    if (base_idx != .) {
-                        WATT_plot = WATT_pmat[,2] :- WATT_pmat[base_idx,2]
-                        BS_plot   = BS_star :- BS_star[,base_idx]
                     }
                 }
                 else if ("`rolling'" == "detrend") {
@@ -1856,12 +1852,12 @@ program define lwdid_large, eclass
             qui replace lower_ci_norm = lower_ci_plot
             qui replace upper_ci_norm = upper_ci_plot
 
-            * force exact zero at r = -1 for display after normalized inference
+            * r = -1 is an anchor only: report it as exactly zero with no band
             qui replace watt_norm     = 0 if ryear == -1
             qui replace lower_ci_norm = 0 if ryear == -1
             qui replace upper_ci_norm = 0 if ryear == -1
 
-            * finalized results for demean: keep normalized series
+            * finalized results for demean: keep anchored series without subtracting WATT(-1)
             qui replace watt     = watt_norm
             qui replace lower_ci = lower_ci_norm
             qui replace upper_ci = upper_ci_norm
@@ -1949,7 +1945,7 @@ program define lwdid_large, eclass
 
                 local yttl "WATT(r)"
                 if "`rolling'" == "demean" {
-                    local yttl "WATT(r), normalized at r = -1"
+                    local yttl "WATT(r), anchored at r = -1"
                 }
                 else if "`rolling'" == "detrend" {
                     local yttl "WATT(r), relative to pre-treatment trend"
