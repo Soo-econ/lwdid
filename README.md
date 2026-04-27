@@ -23,7 +23,7 @@ A companion manuscript describing the method and software is available at SSRN: 
 
 You can install the package directly from SSC by running:
 ```
-ssc install lwdid
+ssc install lwdid, replace
 ``` 
 > To ensure that you are using the most recent version, run `which lwdid` to verify the installed version,
 >
