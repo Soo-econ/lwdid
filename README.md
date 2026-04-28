@@ -39,7 +39,7 @@ A companion manuscript describing the method and software is available at SSRN: 
 > - updated event-study plotting and result-table reporting for the Large-N `rolling(demean)` procedure;
 > - improved storage of additional results through the `save()` option.
 >
-> **Stay tuned for the SSC update!**
+>📌 I will update this notice as soon as the SSC version becomes available. **Stay tuned!**
 
 <br>
 
