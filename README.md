@@ -35,7 +35,7 @@ A companion manuscript describing the method and software is available at SSRN: 
 > ```
 > > Key updates include:
 > - improved handling of large datasets and large unit identifiers, including cases with values such as `1,000,000`;
-> - revised result-table presentation for cleaner reporting;
+> - revised result-table presentation for cleaner reporting; 
 > - updated event-study plotting and result-table reporting for the Large-N `rolling(demean)` procedure;
 > - improved storage of additional results through the `save()` option.
 >
