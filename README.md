@@ -11,25 +11,15 @@ A companion manuscript describing the method and software is available at SSRN: 
 >
 > **Updated `lwdid.ado` file now available in the GitHub repository. — April 27, 2026**
 >
-> The updated version has also been submitted to SSC. Once the SSC update is processed, users will be able to install the latest version directly using:
->
 > ```stata
 > ssc install lwdid, replace
 > ```
-> For now, users who would like to use the most recent development version can install it from GitHub:
->
-> ```stata
-> net install lwdid, from("https://raw.githubusercontent.com/Soo-econ/lwdid/main/") replace
-> ```
->
 > To confirm that the updated version is installed, run:
 >
 > ```stata
 > which lwdid
 > ```
->
 > The output should show:
->
 > ```stata
 > *! version 2.2 April 27 2026
 > ```
@@ -38,8 +28,7 @@ A companion manuscript describing the method and software is available at SSRN: 
 > - revised result-table presentation for cleaner reporting; 
 > - updated event-study plotting and result-table reporting for the Large-N `rolling(demean)` procedure;
 > - improved storage of additional results through the `save()` option.
->
->📌 I will update this notice as soon as the SSC version becomes available. **Stay tuned!**
+
 
 <br>
 
