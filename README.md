@@ -268,9 +268,9 @@ The RI results are displayed immediately after the single-ATT regression output 
 To reproduce the same RI p-value, specify a seed using `riseed()`. Simillarly you can specify the number of replications using `rireps()`.
 
 ```
-lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(123) rireps(2000)
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(408022) rireps(1000)
 ```
-This specification produces __identical RI p-values__ each time the command is executed, with 2,000 randomization replications and a fixed seed of 123.
+This specification produces __identical RI p-values__ each time the command is executed.
 
 <br>
 
