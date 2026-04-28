@@ -7,6 +7,40 @@ A Stata package that implements the **Rolling Difference-in-Differences Estimato
 
 A companion manuscript describing the method and software is available at SSRN: Lee and Wooldridge ([2026b](https://dx.doi.org/10.2139/ssrn.6502558)).
 
+## 🚨 Important Update Notice
+>
+> **Updated `lwdid.ado` file now available in the GitHub repository. — April 27, 2026**
+>
+> The updated version has also been submitted to SSC. Once the SSC update is processed, users will be able to install the latest version directly using:
+>
+> ```stata
+> ssc install lwdid, replace
+> ```
+> For now, users who would like to use the most recent development version can install it from GitHub:
+>
+> ```stata
+> net install lwdid, from("https://raw.githubusercontent.com/Soo-econ/lwdid/main/") replace
+> ```
+>
+> To confirm that the updated version is installed, run:
+>
+> ```stata
+> which lwdid
+> ```
+>
+> The output should show:
+>
+> ```stata
+> *! version 2.2 April 27 2026
+> ```
+> > Key updates include:
+> - improved handling of large datasets and large unit identifiers, including cases with values such as `1,000,000`;
+> - revised result-table presentation for cleaner reporting;
+> - updated event-study plotting and result-table reporting for the Large-N `rolling(demean)` procedure;
+> - improved storage of additional results through the `save()` option.
+>
+> **Stay tuned for the SSC update!**
+
 <br>
 
 # Contents
