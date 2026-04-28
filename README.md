@@ -3,7 +3,6 @@
 A Stata package that implements the **Rolling Difference-in-Differences Estimator** proposed by Lee and Wooldridge ([2025a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518), [2026a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)). It provides fast and flexible estimation for staggered and common treatment timing in panel data, and offers a unified implementation that accomodates both standard large-N asymptotic settings and cases with small cross-sectional units, where conventional large-N inference may not be reliable.
 
 `lwdid` is a user-written Stata command freely available for academic and research use.
-> The package is now available on SSC: `ssc install lwdid`  
 
 A companion manuscript describing the method and software is available at SSRN: Lee and Wooldridge ([2026b](https://dx.doi.org/10.2139/ssrn.6502558)).
 
