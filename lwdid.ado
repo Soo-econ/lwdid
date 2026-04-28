@@ -1,9 +1,9 @@
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.1 April 16 2026
+*! version 2.2 April 27 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
-*! https://github.com/Soo-econ/lwdid.git  [Readme]
+*! lwdid GitHub Repositories: https://github.com/Soo-econ/lwdid.git  [Readme]
 
 set more off
 *set trace on
@@ -219,15 +219,15 @@ program define lwdid_small_single, eclass
 		local gyear = r(min)
 
 		* treatment indicator
-		capture drop d_
-		gen byte d_ = (`gvar' > 0)
+		qui capture drop d_
+		qui gen byte d_ = (`gvar' > 0)
 
 		* post indicator
-		gen byte `post_' = (`timevar' >= `gyear') if `touse'
-		replace `post_' = . if !`touse'
+		qui gen byte `post_' = (`timevar' >= `gyear') if `touse'
+		qui replace `post_' = . if !`touse'
 		di as txt "------------------------------------------------------------"
 		di as txt "gvar(): single cohort detected -> common timing"
-		di as txt "lwdid [small-N mode]  rolling=`rolling'  method=ols  ci=`ci'"
+		di as txt "lwdid [small-N mode]  rolling=`rolling'  method=ols"
 		di as txt "------------------------------------------------------------"
 
 
@@ -387,40 +387,57 @@ program define lwdid_small_single, eclass
 			local RHS ""
 		}
 
-	
-* --- Main regression & optional randomization inference
-
-		* --- Main regression with/without vce() ---
-		if "`vce'" != "" {
-			di as txt " -- [1] Single ATT, with `vce' adjustment"
-			regress ydot_postavg d_ `RHS' if firstpost, vce(`vce')
-
-			if `__do_export' & `__has_or2' {
-				outreg2 using "`__xls'", append label nose ///
-					ctitle("`rolling' (OLS) with `vce'") addstat(N, e(N))
-			}
-		}
-		else {
-			di as txt " -- [1] Single ATT, without variance adjustment "
-			regress ydot_postavg d_ `RHS' if firstpost
-
-			if `__do_export' & `__has_or2' {
-				outreg2 using "`__xls'", replace label nose ///
-					ctitle("`rolling' (OLS)") addstat(N, e(N))
-			}
-		}
-
-**# RI
 			
-		if "`ri'" != "" {
-    quietly set rng mt64
-    if "`riseed'" != "" quietly set seed `riseed'
-    local reps = `rireps'
+		* --- Main regression & optional randomization inference
 
-    scalar __b0 = _b[d_]
-    mata: st_numscalar("__p_ri", ///
-        lwdid_ri_inline(`reps', st_numscalar("__b0"), "`RHS'"))
-}
+				* --- [1] Single ATT regression ---
+				di as txt _n "[1] Single ATT"
+				if "`vce'" != "" {
+					di as txt "    Variance adjustment: `vce'"
+					regress ydot_postavg d_ `RHS' if firstpost, vce(`vce')
+				}
+				else {
+					di as txt "    Variance adjustment: none"
+					regress ydot_postavg d_ `RHS' if firstpost
+				}
+
+				* keep these for e()
+				matrix `b' = e(b)
+				matrix `V' = e(V)
+				scalar __att_overall = _b[d_]
+				scalar __se_overall  = _se[d_]
+
+				* optional export
+				if `__do_export' & `__has_or2' {
+					if "`vce'" != "" {
+						outreg2 using "`__xls'", append label nose ///
+							ctitle("`rolling' (OLS) with `vce'") addstat(N, e(N))
+					}
+					else {
+						outreg2 using "`__xls'", replace label nose ///
+							ctitle("`rolling' (OLS)") addstat(N, e(N))
+					}
+				}
+
+				* --- Randomization inference ---
+				if "`ri'" != "" {
+					di as txt _n "    Randomization inference (RI)"
+					di as txt "    Replications: `rireps'"
+
+					quietly set rng mt64
+					if "`riseed'" != "" {
+						quietly set seed `riseed'
+						di as txt "    Seed: `riseed'"
+					}
+
+					local reps = `rireps'
+
+					scalar __b0 = __att_overall
+					mata: st_numscalar("__p_ri", ///
+						lwdid_ri_inline(`reps', st_numscalar("__b0"), "`RHS'"))
+
+					di as txt "    RI p-value: " as res %9.4f __p_ri
+				}
 
 		* keep these for e()
 		matrix `b' = e(b)
@@ -510,17 +527,58 @@ program define lwdid_small_single, eclass
 			label var se     "SE(ATT_t)"
 			label var tstat  "t"
 			label var pval   "p-value"
-			qui scalar cr=invttail(e(df_r), 0.025)
+			qui scalar cr = invttail(e(df_r), (100-`level')/200)
 			qui gen double ci_lw = beta - cr*se
 			qui gen double ci_up = beta + cr*se
 			order period tindex beta se ci_lw ci_up tstat pval N
 			
-			di as txt " ----[2] Period-by-period ATTs"
+	di as txt _n "[2] Period-by-period ATTs"
 
-			format beta se ci_lw ci_up %9.3f
-			format tstat pval %9.3f
+			local __maxrows = 15
+			quietly count
+			local __nrows = r(N)
 
-			list period beta se ci_lw ci_up tstat pval N, noobs 
+			format beta se ci_lw ci_up %9.0g
+			format tstat pval %9.0g
+
+			if `__nrows' <= `__maxrows' {
+					di as txt "{hline 64}"
+					di as txt _col(3)  "period" ///
+						_col(15) "ATT" ///
+						_col(25) "Std. err." ///
+						_col(36) "t" ///
+						_col(43) "P>|t|" ///
+						_col(53) "[`level'% conf. int.]"
+					di as txt "{hline 64}"
+
+					quietly count
+					forvalues __i = 1/`r(N)' {
+						di as txt _col(2)  %8s period[`__i'] ///
+							as res _col(13) %8.0g beta[`__i'] ///
+							as res _col(23) %8.0g se[`__i'] ///
+							as res _col(33) %7.3f tstat[`__i'] ///
+							as res _col(42) %6.3f pval[`__i'] ///
+							as res _col(51) %8.0g ci_lw[`__i'] ///
+							as res _col(61) %8.0g ci_up[`__i']
+					}
+
+					di as txt "{hline 68}"
+					di as txt "Note: Confidence intervals, t statistics, and p-values are pointwise t-based."
+								}
+			else {
+					di as txt "{hline 68}"
+					di as txt "Note: The period-by-period table is not displayed because it has more than 15 rows."
+					di as txt "Note: This avoids lengthy output for monthly or quarterly data."
+
+					if "`save'" != "" {
+						di as txt "Note: The full period-by-period results are saved in the .dta file specified by save()."
+					}
+					else {
+						di as txt "Note: To view the full period-by-period results, rerun the command with save() option."
+					}
+
+					di as txt "{hline 68}"
+				}
 
 			if "`save'" != "" {
 
@@ -835,13 +893,6 @@ program define lwdid_small_single, eclass
         ereturn scalar tpost1    = `tpost1'
 		if "`ri'" != "" ereturn scalar p_ri = __p_ri
 		
-		di as res "Single ATT = " %9.3f e(att) "   SE = " %9.3f e(se_att)
-		
-		if "`ri'" != "" {
-				di as txt "-------------------------------------------"
-					di as res "Randomization inference (RI) p-value = " %9.3f e(p_ri) 
-				di as txt "-------------------------------------------"
-		}
 
 				capture confirm matrix ATTt
 				if !_rc ereturn matrix ATTt = ATTt
@@ -959,7 +1010,7 @@ program define lwdid_small_staggered, eclass
   quietly {
         capture drop d_
         gen byte d_ = (`gvar' != 0) if `touse'
-        replace d_ = 0 if missing(d_)
+        qui replace d_ = 0 if missing(d_)
         label var d_ "ever-treated indicator"
 
         preserve
@@ -1152,17 +1203,18 @@ program define lwdid_large, eclass
 			local ci_type "simultaneous"
 			
 			
-		* --- Internal numeric id for large-N computations (xtset-safe) / keep original id as well.
+		* --- Internal compact numeric id for large-N computations.
+		*     Always regroup ivar(), even when it is already numeric, to avoid
+		*     storing long/high-dimensional original identifiers in local macros.
 			local id_orig `ivar'
-			tempvar __id
-			capture confirm numeric variable `ivar'
-			if _rc {
-				quietly egen long `__id' = group(`ivar') if `touse'
-				local id `__id'
+			quietly count if `touse' & missing(`ivar')
+			if r(N) > 0 {
+				di as err "ivar() contains missing values in the estimation sample."
+				exit 459
 			}
-			else {
-				local id `ivar'
-			}	
+			tempvar __id
+			quietly egen long `__id' = group(`ivar') if `touse'
+			local id `__id'
 				
 		* --- Graph-scheme option
 			if "`scheme'" == "" {
@@ -1173,12 +1225,25 @@ program define lwdid_large, eclass
 			di as txt "------------------------------------------------------------"
 			di as txt " lwdid [large-N mode]  rolling=`rolling'  method=`method'"
 
-			* --- cluster (default = internal id; cluster() can still be user-specified)
+			* --- cluster (default = internal id).
+			*     If cluster() is supplied, create a compact internal cluster id as well.
 			if "`cluster'" == "" {
 				local cluster_var `id'
 			}
 			else {
-				local cluster_var `cluster'
+				capture confirm variable `cluster'
+				if _rc {
+					di as err "cluster() variable `cluster' not found."
+					exit 111
+				}
+				quietly count if `touse' & missing(`cluster')
+				if r(N) > 0 {
+					di as err "cluster() contains missing values in the estimation sample."
+					exit 459
+				}
+				tempvar __cluster
+				quietly egen long `__cluster' = group(`cluster') if `touse'
+				local cluster_var `__cluster'
 			}
 			
 			* --- xtset
@@ -1305,7 +1370,7 @@ program define lwdid_large, eclass
 					preserve
 					keep if `touse' & `gvar' > 0
 					keep if `touse' & `gvar' > 0
-					bys `gvar' `ivar': gen byte one = (_n==1)
+					bys `gvar' `id': gen byte one = (_n==1)
 					bys `gvar': egen Ng = total(one)
 					keep `gvar' Ng
 					duplicates drop
@@ -1675,16 +1740,18 @@ program define lwdid_large, eclass
 
                 tempvar cl_num unit_num
                 qui egen long `cl_num'   = group(`cluster_var') if `touse'
-                qui egen long `unit_num' = group(`ivar')        if `touse'
+                qui egen long `unit_num' = group(`id')          if `touse'
 
                 mata: cl_vec   = st_data(., "`cl_num'",   "`touse'")
                 mata: unit_vec = st_data(., "`unit_num'", "`touse'")
 
-                qui levelsof `cluster_var' if `touse', local(cl_vals)
-                local n_clusters : word count `cl_vals'
-
-                mata: st_numscalar("n_units_sc", max(unit_vec))
-                local n_units = n_units_sc
+                * Do not use levelsof here: with many units/clusters the local
+                * macro can exceed Stata's maximum line length. The grouped
+                * identifiers are compact 1,...,G, so r(max) gives the count.
+                qui su `cl_num' if `touse', meanonly
+                local n_clusters = r(max)
+                qui su `unit_num' if `touse', meanonly
+                local n_units = r(max)
             }
 
             mata {
@@ -1872,25 +1939,50 @@ program define lwdid_large, eclass
         * finalized standard errors
         qui replace se = se_plot
 
+        * t statistics and pointwise large-N normal p-values
+        capture drop t_stat p_value
+        qui gen double t_stat  = watt / se if se > 0 & !missing(watt, se)
+        qui gen double p_value = 2*normal(-abs(t_stat)) if !missing(t_stat)
+
         sort ryear
 
-        format watt se lower_ci upper_ci %9.3f
+        * Use Stata's general numeric display format rather than fixed decimals.
+        * This avoids truncating coefficient, SE, and CI output to three or four digits.
+        format watt se lower_ci upper_ci t_stat %10.0g
+        format p_value %5.3f
 
-		di as txt "-> WATT(r) with simultaneous `level'% confidence bands  (bootstrap, B=`reps')"
+		di as txt "-> WATT(r) with simultaneous `level'% bands; B = `reps'"
         di as txt "------------------------------------------------------------"
-
         * temporary variables for cleaner reporting only
         capture drop low_ci up_ci
-        qui gen low_ci = lower_ci
-        qui gen up_ci  = upper_ci
+        qui gen double low_ci = lower_ci
+        qui gen double up_ci  = upper_ci
 
-        format low_ci up_ci %9.3f
+        format low_ci up_ci %10.0g
+					di as txt "{hline 64}"
+					di as txt _col(4)  "ryear" ///
+						_col(14) "WATT" ///
+						_col(26) "Std. err." ///
+						_col(39) "[`level'% conf. band]" ///
+						_col(61) "N coh."
+					di as txt "{hline 64}"
 
-        list ryear watt se low_ci up_ci N_cohort N_units , noobs
+					quietly count
+					forvalues __i = 1/`r(N)' {
+						di as txt _col(3)  %6.0g ryear[`__i'] ///
+							as res _col(12) %9.0g watt[`__i'] ///
+							as res _col(24) %9.0g se[`__i'] ///
+							as res _col(38) %9.0g low_ci[`__i'] ///
+							as res _col(49) %9.0g up_ci[`__i'] ///
+							as res _col(62) %4.0g N_cohort[`__i']
+					}
 
-
-
-* --- Graph
+					di as txt "{hline 64}"
+					di as txt "Note: N coh. is the number of treated cohorts contributing to each ryear."
+					di as txt "Note: z statistics, p-values, and N_units are saved in the .dta file when save() is specified."
+					
+					
+		* --- Graph
         if "`graph'" != "" {
                 if "`title'" == "" local title "lwdid: `method' (`rolling')"
                 local base_r = 0
@@ -1945,10 +2037,10 @@ program define lwdid_large, eclass
 
                 local yttl "WATT(r)"
                 if "`rolling'" == "demean" {
-                    local yttl "WATT(r), anchored at r = -1"
+                    local yttl "WATT(r)"
                 }
                 else if "`rolling'" == "detrend" {
-                    local yttl "WATT(r), relative to pre-treatment trend"
+                    local yttl "WATT(r)"
                 }
 
                 twoway ///
@@ -1978,15 +2070,16 @@ program define lwdid_large, eclass
 * --- save
  if "`save'" != "" {
             qui keep ryear ///
-                watt se low_ci up_ci ///
+                watt se t_stat p_value low_ci up_ci ///
                 N_cohort N_units
 
             qui order ryear ///
-                watt se low_ci up_ci ///
+                watt se t_stat p_value low_ci up_ci ///
                 N_cohort N_units
-            
-            * reset display format before saving
-            format watt se low_ci up_ci %9.0g
+
+            * keep general display formats in the saved result dataset
+            format watt se t_stat low_ci up_ci %10.0g
+            format p_value %5.3f
 
             qui save "`save'", replace
         }		
