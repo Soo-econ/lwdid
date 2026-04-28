@@ -33,9 +33,10 @@ ssc install lwdid, replace
 ```
 ssc describe lwdid
 ```
-To download the package files provided through SSC, including example files, run:
- ```
-net get lwdid  
+
+To download the `.dta` files used to replicate the results in the paper and the [examples](#small-n-case) below, run:
+```
+net get lwdid
 ```
 
 To view the help file and code description, please run:
@@ -151,8 +152,8 @@ By specifying `rolling(detrend)`, the command performs a __unit-specific detrend
 
 Alternatively, you can use `rolling(demean)` to remove **unit-specific means** (when the PT assumption hold), instead of **unit-specific trends**.
 
-The default `graph` option produces a plot comparing **residualized ourcomes of treated and control units**:
 
+__The default `graph` option produces:__
 <div align="center">
 <img src="subfolder/ex2.png">
 </div>
@@ -329,21 +330,26 @@ In this example:
 > For a black-and-white version suitable for journal submissions, you can use scheme(s2mono).
 > `graphregion(color(white)) plotregion(color(white))` replace the default gray background in `scheme(s2color)` with a clean white background, which is often preferred for presentations and publication-quality figures.
 
-By default, the graph reports **simultaneous confidence bands**, which account for joint uncertainty across all event times, $r$. 
-
-These bands are constructed using a multiplier bootstrap and are typically wider than pointwise intervals because they control coverage over the entire event-study path.
-
 <div align="center">
 <img src="subfolder/ex7-new.png">
 </div>
 
-The option `save(myresult)` also creates a new dataset `myresult.dta` in your working directory.
-This file contains:
+By default, the graph reports **simultaneous confidence bands** for the event-study path. 
 
-* weighted ATT estimates across relative time,
-* corresponding **standard errors** and **confidence bands** (computed via a multiplier bootstrap using wild weights),
-* `N_cohort`: the number of treated cohorts used compute the estimates.
-* `N_units`: the total number of units included in the WATT estimation sample.
+These bands are designed to provide uniform coverage across the reported event times $r$, rather than pointwise coverage for each $r$ separately.
+
+The option `save(myresult)` also creates a new dataset, `myresult.dta`, in the working directory. This file contains:
+
+* `ryear`: event time, $r=t-g$;
+* `watt`: the weighted average treatment effect on the treated, $W\!ATT(r)$;
+* `se`: the standard error for $WATT(r)$;
+* `t_stat`: the pointwise test statistic, computed as `watt/se`;
+* `p_value`: the pointwise normal-approximation p-value;
+* `low_ci` and `up_ci`: the lower and upper bounds of the simultaneous confidence band;
+* `N_cohort`: the number of treated cohorts contributing to each event-time estimate;
+* `N_units`: the number of units included in the $W\!ATT(r)$ estimation sample.
+
+Note that `t_stat` and `p_value` are **pointwise** quantities, while `low_ci` and `up_ci` correspond to the **simultaneous confidence band**.
 
 <br>
 <div align="center">
