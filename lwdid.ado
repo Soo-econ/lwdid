@@ -3,7 +3,7 @@
 *! version 2.2 April 27 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
-*! lwdid GitHub repository and README: https://github.com/Soo-econ/lwdid.git  
+*! lwdid GitHub repository and README: https://github.com/Soo-econ/lwdid
 
 set more off
 *set trace on
