@@ -135,21 +135,57 @@ By default, `lwdid` reports both:
 
 * the **overall (single) treatment effect**, and
 * **period-by-period ATT estimates**.
-  
+
+<div align="center">
+<img src="subfolder/ex1.png">
+</div>
+<br>
+
+> To avoid lengthy output for monthly or quarterly data, period-by-period ATTs are not displayed when there are more than 15 rows. To view the full results, specify the `save()` option; the results will be saved in a `.dta` file.
+
+<br>
+
 Here, `gvar(first_year)` specifies the first treatment year for each unit (never-treated units should be coded as `0`).  
-In this example, only California is treated in 1989, so this is a **single-treatment case**. If multiple units are treated in different years, `lwdid` automatically detects this and applies the **small-N staggered adoption** procedure.
 
 By specifying `rolling(detrend)`, the command performs a __unit-specific detrending tranformation__, allowing each unit to follow its own heterogeneous linear trend and thereby relaxing the parallel trends (PT) assumption.
 
-Alternatively, you can use
+Alternatively, you can use `rolling(demean)` to remove **unit-specific means** (when the PT assumption hold), instead of **unit-specific trends**.
 
-```stata
-rolling(demean)
+The default `graph` option produces a plot comparing **residualized ourcomes of treated and control units**:
+
+<div align="center">
+<img src="subfolder/ex2.png">
+</div>
+
+<br>
+
+## [Example 2] Customizing graphs using `gopts()` and `scheme()`
+
+You can __easily customize the graph__ through the `gopts()` option, which allows full customization of titles, axes, legends, and other graphical elements. For example:
 ```
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ///
+      graph gopts(ytitle("Residualized average outcome") xtitle("Year") ///
+      legend(pos(1) ring(0)) ///
+      title("The Effects of California’s Tobacco Control Program"))
+```
+__This produces:__
 
-to remove **unit-specific means** (when the PT assumption hold), instead of **unit-specific trends**.
+<div align="center">
+<img src="subfolder/ex3.png">
+</div>
 
-## \[Example 2\] Using Quarterly (or Monthly) data 
+To generate a **black-and-white version** suitable for journal submissions, you can use the `scheme(s1mono)` option:
+
+```
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) scheme(s1mono) graph gopts(ytitle("Residualized average outcome") xtitle("Year") ///
+      legend(pos(1) ring(0)) ///
+      title("The Effects of California's Tobacco Control Program"))
+```
+<div align="center">
+<img src="subfolder/ex4.png">
+</div>
+
+## \[Example 3\] Using Quarterly (or Monthly) data 
 
 For quarterly data, `rolling(demeanq)` or `rolling(detrendq)` can be used to account for seasonality.  
 For monthly data, `rolling(demeanm)` or `rolling(detrendm)` can be used to remove month-of-year effects.
@@ -212,39 +248,15 @@ lwdid y, small ivar(state) tvar(tm) gvar(first_treat_m) rolling(detrendm) graph
 
 <br>
 
-## [Example 3] Customizing graphs using `gopts()` and `scheme()`
-
-The default graph (from Example 1 using the `graph` option) produces a plot comparing **residualized ourcomes of treated and control units**:
-
-![](subfolder/ex2.png)
-
-You can __easily customize the graph__ through the `gopts()` option, which allows full customization of titles, axes, legends, and other graphical elements. For example:
-```
-lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ///
-      graph gopts(ytitle("Residualized average outcome") xtitle("Year") ///
-      legend(pos(1) ring(0)) ///
-      title("The Effects of California’s Tobacco Control Program"))
-```
-__This produces:__
-
-![](subfolder/ex3.png)
-
-To generate a **black-and-white version** suitable for journal submissions, you can use the `scheme(s1mono)` option:
-
-![](subfolder/ex4.png)
-
-<br>
-
 ### [Example 4] Randomization Inference (RI) p-values
 
 When using the `ri` option, the command performs a manual randomization inference procedure.
 ```
 lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri 
 ```
-By default, it runs `rireps(1000)` replications and does __not__ set a random seed -- meaning that the computed RI p-value will vary slightly each time you run the command.
+By default, it runs `rireps(1000)` replications and does __not__ set a random seed. Therefore, the reported RI p-value will vary slightly across runs.
 
-
-The calculated RI p-value will be reported at __the end of the results__ (see below):
+The RI results are displayed immediately after the single-ATT regression output (see below):
 
 <div align="center">
 <img src="subfolder/ex5.png">
@@ -252,7 +264,7 @@ The calculated RI p-value will be reported at __the end of the results__ (see be
 
 <br>
 
-If you want fully reproducible results, you can specify the seed using `riseed()`. Simillarly you can specify the number of replications using `rireps()`.
+To reproduce the same RI p-value, specify a seed using `riseed()`. Simillarly you can specify the number of replications using `rireps()`.
 
 ```
 lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(123) rireps(2000)
