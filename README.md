@@ -8,7 +8,7 @@ A companion manuscript describing the method and software is available at SSRN: 
 
 ## 🚨 Important Update Notice
 >
-> **Updated `lwdid.ado` file now available in the GitHub repository. — April 27, 2026**
+> **Updated `lwdid.ado` file now available in SSC. — April 27, 2026**
 >
 > ```stata
 > ssc install lwdid, replace
