@@ -277,7 +277,7 @@ When using the `ri` option, the command performs a manual randomization inferenc
 ```
 lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri 
 ```
-By default, it runs `rireps(1000)` replications and does __not__ set a random seed. Therefore, the reported RI p-value will vary slightly across runs.
+By default, it runs `rireps(999)` replications and does __not__ set a random seed. Therefore, the reported RI p-value will vary slightly across runs.
 
 The RI results are displayed immediately after the single-ATT regression output (see below):
 
@@ -290,7 +290,7 @@ The RI results are displayed immediately after the single-ATT regression output 
 To reproduce the same RI p-value, specify a seed using `riseed()`. Simillarly you can specify the number of replications using `rireps()`.
 
 ```
-lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(408022) rireps(1000)
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(408022) rireps(999)
 ```
 This specification produces __identical RI p-values__ each time the command is executed.
 
