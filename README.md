@@ -290,7 +290,7 @@ The RI results are displayed immediately after the single-ATT regression output 
 To reproduce the same RI p-value, specify a seed using `riseed()`. Simillarly you can specify the number of replications using `rireps()`.
 
 ```
-lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(408022) rireps(999)
+lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) ri riseed(349139) rireps(999)
 ```
 This specification produces __identical RI p-values__ each time the command is executed.
 
@@ -353,7 +353,7 @@ In this example:
 > `graphregion(color(white)) plotregion(color(white))` replace the default gray background in `scheme(s2color)` with a clean white background, which is often preferred for presentations and publication-quality figures.
 
 <div align="center">
-<img src="subfolder/ex7-new.png">
+<img src="subfolder/ex7.png">
 </div>
 
 By default, the graph reports **simultaneous confidence bands** for the event-study path. 
