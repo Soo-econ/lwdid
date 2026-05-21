@@ -35,10 +35,10 @@ program define lwdid, eclass sortpreserve
 			 GRAPH                               ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
-			 SAVE(string)                      ///
+			 SAVE(string)                        ///
 			 GID(string)                         ///
 			 RI                                  ///
-			 RIREPS(integer 999)                ///
+			 RIREPS(integer 999)                 ///
 			 RISEED(string)                      ///
 			]
 
@@ -436,7 +436,7 @@ program define lwdid_small_single, eclass
 					mata: st_numscalar("__p_ri", ///
 						lwdid_ri_inline(`reps', st_numscalar("__b0"), "`RHS'"))
 
-					di as txt "    RI p-value: " as res %9.4f __p_ri
+					di as txt "    RI p-value: " as res %9.3f __p_ri
 				}
 
 		* keep these for e()
@@ -539,30 +539,31 @@ program define lwdid_small_single, eclass
 			local __nrows = r(N)
 
 			format beta se ci_lw ci_up %9.0g
-			format tstat pval %9.0g
+			format tstat %7.2f
+			format pval %6.3f
 
 			if `__nrows' <= `__maxrows' {
-					di as txt "{hline 64}"
+					di as txt "{hline 72}"
 					di as txt _col(3)  "period" ///
 						_col(15) "ATT" ///
 						_col(25) "Std. err." ///
 						_col(36) "t" ///
 						_col(43) "P>|t|" ///
 						_col(53) "[`level'% conf. int.]"
-					di as txt "{hline 64}"
+					di as txt "{hline 72}"
 
 					quietly count
 					forvalues __i = 1/`r(N)' {
-						di as txt _col(2)  %8s period[`__i'] ///
-							as res _col(13) %8.0g beta[`__i'] ///
-							as res _col(23) %8.0g se[`__i'] ///
-							as res _col(33) %7.3f tstat[`__i'] ///
-							as res _col(42) %6.3f pval[`__i'] ///
-							as res _col(51) %8.0g ci_lw[`__i'] ///
-							as res _col(61) %8.0g ci_up[`__i']
+					di as txt _col(2)  %8s period[`__i'] ///
+						as res _col(13) %9.0g beta[`__i'] ///
+						as res _col(23) %9.0g se[`__i'] ///
+						as res _col(33) %7.2f tstat[`__i'] ///
+						as res _col(42) %6.3f pval[`__i'] ///
+						as res _col(51) %9.0g ci_lw[`__i'] ///
+						as res _col(62) %9.0g ci_up[`__i']
 					}
 
-					di as txt "{hline 68}"
+					di as txt "{hline 72}"
 					di as txt "Note: Confidence intervals, t statistics, and p-values are pointwise t-based."
 								}
 			else {
@@ -588,8 +589,8 @@ program define lwdid_small_single, eclass
 
 			* reset display format before saving
 			format att se ci_lw ci_up %9.0g
-			format tstat pval %9.0g
-
+			format tstat %7.2f
+			format pval %6.3f
 			save "`save'", replace
 			qui rename att beta
 		}
