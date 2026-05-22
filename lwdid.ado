@@ -1,6 +1,6 @@
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.2 April 27 2026
+*! version 2.3 May 22 2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 *! lwdid GitHub repository and README: https://github.com/Soo-econ/lwdid
@@ -1247,7 +1247,21 @@ program define lwdid_large, eclass
 				local cluster_var `__cluster'
 			}
 			
-			* --- xtset
+			* --- Save user's current xtset settings
+			local __lwdid_had_xtset 0
+			local __lwdid_old_panel ""
+			local __lwdid_old_time  ""
+			local __lwdid_old_delta ""
+
+			capture quietly xtset
+			if !_rc {
+				local __lwdid_old_panel "`r(panelvar)'"
+				local __lwdid_old_time  "`r(timevar)'"
+				local __lwdid_old_delta "`r(tdelta)'"
+				if "`__lwdid_old_panel'" != "" local __lwdid_had_xtset 1
+			}
+
+			* --- Temporary internal xtset for lwdid computations
 			quietly xtset `id' `tvar'
 
 			* --- time range
@@ -2085,7 +2099,27 @@ program define lwdid_large, eclass
             qui save "`save'", replace
         }		
 			restore
-						
+
+			* --- Restore user's original xtset settings
+			if `__lwdid_had_xtset' {
+				if "`__lwdid_old_time'" != "" {
+					if "`__lwdid_old_delta'" != "" {
+						capture quietly xtset `__lwdid_old_panel' `__lwdid_old_time', delta(`__lwdid_old_delta')
+						if _rc {
+							quietly xtset `__lwdid_old_panel' `__lwdid_old_time'
+						}
+					}
+					else {
+						quietly xtset `__lwdid_old_panel' `__lwdid_old_time'
+					}
+				}
+				else {
+					quietly xtset `__lwdid_old_panel'
+				}
+			}
+			else {
+				capture quietly xtset, clear
+			}
 						
 			quietly {
 				mata: mata drop IF_mat IF_r IF_col cell_g cell_t cl_vec unit_vec Wmat WATT_pmat BS_star BS_plot WATT_plot
