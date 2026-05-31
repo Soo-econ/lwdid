@@ -62,6 +62,9 @@ Required unless {cmd:small} is specified.{p_end}
 {synopt:{opt small}}{it:Small-N only.} Specifies the small-sample implementation for settings with few treated units, few control units, or both.{p_end}
 
 {syntab:Optional options}
+
+{synopt:{opt attgt}}{it:Large-N only.}  Reports cohort-by-year  ATT(g,t)  estimates with robust standard errors and confidence intervals.{p_end}
+
 {synopt:{opt save(filename)}}Save estimation results as a .dta file.{p_end}
 
 {synopt:{opt graph}}Displays graphical results.{break}
