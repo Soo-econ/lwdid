@@ -181,7 +181,7 @@ scale.
 {pstd}
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2025), 
 "A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data," 
-Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.4516518":SSSRN 4516518}.
+forthcoming at {it:Journal of Econometrics & Statistics}.
 
 {pstd}
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026a), 
