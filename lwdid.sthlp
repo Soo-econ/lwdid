@@ -123,7 +123,7 @@ automatically detects whether the design involves a single treatment cohort
 appropriate estimation procedure. 
 
 {pstd}
-Details of the implementation are given in Lee and Wooldridge (2026c); 
+Details of the implementation are given in Hur, Lee and Wooldridge (2026c); 
 see also the {browse "https://github.com/Soo-econ/lwdid":lwdid GitHub repository}
 for additional examples and documentation.
 
@@ -179,17 +179,17 @@ scale.
 {title:Citation}
 
 {pstd}
-Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026a), 
+Lee, S. J., and Wooldridge, J. M. (2026a), 
 "A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data," 
 forthcoming at {browse "https://doi.org/10.1080/07350015.2026.2683047":{it:Journal of Business & Economic Statistics}}.
 
 {pstd}
-Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026b), 
+Lee, S. J., and Wooldridge, J. M. (2026b), 
 "Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"  
 Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.5325686":SSRN 5325686}
 
 {pstd}
-Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026c), 
+Hur, E. K., Lee, S. J., and Wooldridge, J. M. (2026c), 
 "Rolling Difference-in-Differences Estimation for Small and Large Panels,"  
 Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.6502558":SSRN 6502558}
 
