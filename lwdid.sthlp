@@ -11,7 +11,7 @@
 {title:Title}
 
 {p2colset 5 20 22 2}{...}
-{p2col :{bf:lwdid} {hline 2}}Transformation-based rolling DID estimator (Lee & Wooldridge, 2025, 2026a){p_end}
+{p2col :{bf:lwdid} {hline 2}}Transformation-based rolling DID estimator (Lee & Wooldridge, 2026a, 2026b){p_end}
 {p2colreset}{...}
 
 
@@ -92,7 +92,7 @@ Small-N: plots treated and control means of residualized outcomes over time.{p_e
 
 {pstd}
 {cmd:lwdid} implements the transformation-based rolling Difference-in-Differences estimators 
-developed in Lee and Wooldridge (2025, 2026a). 
+developed in Lee and Wooldridge (2026a, 2026b). 
 The command provides a unified implementation for panel data settings with either 
 a {it:large-N} or a {it:small-N} cross-sectional dimension, allowing treatment effects
 to be estimated under both the staggered treatment adoption and the common timing case. 
@@ -113,7 +113,7 @@ heterogeneous treatment effects and unit-specific heterogeneous linear trends.
 When the cross-sectional dimension is small ({it:small-N}), conventional
 large-N inference may be unreliable. In such settings, specifying
 the {cmd:small} option invokes the exact small-sample inference procedures
-developed in Lee and Wooldridge (2026a). The seasonal-adjustment options
+developed in Lee and Wooldridge (2026b). The seasonal-adjustment options
 {cmd:demeanq}, {cmd:detrendq}, {cmd:demeanm}, and {cmd:detrendm} are currently available only under the small-N implementation.
 
 {pstd}
@@ -123,7 +123,7 @@ automatically detects whether the design involves a single treatment cohort
 appropriate estimation procedure. 
 
 {pstd}
-Details of the implementation are given in Lee and Wooldridge (2026b); 
+Details of the implementation are given in Lee and Wooldridge (2026c); 
 see also the {browse "https://github.com/Soo-econ/lwdid":lwdid GitHub repository}
 for additional examples and documentation.
 
@@ -179,17 +179,16 @@ scale.
 {title:Citation}
 
 {pstd}
-Lee, Soo Jeong, and Jeffrey M. Wooldridge (2025), 
-"A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data," 
-forthcoming at {it:Journal of Econometrics & Statistics}.
-
-{pstd}
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026a), 
+"A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data," 
+forthcoming at {browse "https://doi.org/10.1080/07350015.2026.2683047":{it:Journal of Business & Economic Statistics}}.
+{pstd}
+Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026b), 
 "Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"  
 Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.5325686":SSRN 5325686}
 
 {pstd}
-Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026b), 
+Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026c), 
 "Rolling Difference-in-Differences Estimation for Small and Large Panels,"  
 Working Paper, Available at {browse "https://dx.doi.org/10.2139/ssrn.6502558":SSRN 6502558}
 
