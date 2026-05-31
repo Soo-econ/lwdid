@@ -182,6 +182,7 @@ scale.
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026a), 
 "A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data," 
 forthcoming at {browse "https://doi.org/10.1080/07350015.2026.2683047":{it:Journal of Business & Economic Statistics}}.
+
 {pstd}
 Lee, Soo Jeong, and Jeffrey M. Wooldridge (2026b), 
 "Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"  
