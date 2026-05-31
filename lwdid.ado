@@ -1,6 +1,6 @@
+*! version 2.3 31May2026
 
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
-*! version 2.3 31May2026
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
 *! lwdid GitHub repository and README: https://github.com/Soo-econ/lwdid
