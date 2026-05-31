@@ -98,11 +98,11 @@ a {it:large-N} or a {it:small-N} cross-sectional dimension, allowing treatment e
 to be estimated under both the staggered treatment adoption and the common timing case. 
 
 {pstd}
-The central idea is to transform outcomes within each unit to remove
-pre-treatment means, trends, or seasonal components, yielding residualized
-outcomes. These transformed outcomes allow treatment effects to be estimated
-using simple cross-sectional regressions in each post-treatment period,
-facilitating both overall and period-specific ATT estimation.
+The central idea is to transform outcome variables within each unit to remove
+pre-treatment means, trends, or seasonal components. This within-unit transformation
+converts panel data into a series of cross-sectional datasets where the residualized outcomes serve as the dependent variable.
+Treatment effects are then estimated via simple cross-sectional regressions in each
+period, enabling both overall and period-specific ATT estimation.
 
 {pstd}
 By default, {cmd:lwdid} uses the large-N procedure of Lee and Wooldridge (2025),
@@ -114,7 +114,7 @@ When the cross-sectional dimension is small ({it:small-N}), conventional
 large-N inference may be unreliable. In such settings, specifying
 the {cmd:small} option invokes the exact small-sample inference procedures
 developed in Lee and Wooldridge (2026b). The seasonal-adjustment options
-{cmd:demeanq}, {cmd:detrendq}, {cmd:demeanm}, and {cmd:detrendm} are currently available only under the small-N implementation.
+{cmd:demeanq}, {cmd:detrendq}, {cmd:demeanm}, and {cmd:detrendm} are currently available under the small-N implementation.
 
 {pstd}
 Based on the treatment cohort variable specified in {cmd:gvar()}, {cmd:lwdid}
