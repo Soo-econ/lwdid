@@ -66,6 +66,12 @@ To view the help file and code description, please run:
 help lwdid
 ```
 
+> 🚨 To install the latest version directly from GitHub, run the following command in Stata:
+```
+ net install lwdid, from("https://raw.githubusercontent.com/Soo-econ/lwdid/main/") replace
+ ```
+ 
+
 <br>
 
 # Syntax
