@@ -63,6 +63,8 @@ Required unless {cmd:small} is specified.{p_end}
 
 {syntab:Optional options}
 
+{synopt:{opt pre(#)}}{it:Large-N only.} Specifies the number of pre-treatment periods used for averaging or detrending. By default, all available pre-treatment periods are used. {cmd:pre(1)} uses only the last pre-treatment period for demeaning-based transformations; detrending requires at least two pre-treatment periods.{p_end}
+
 {synopt:{opt attgt}}{it:Large-N only.}  Reports cohort-by-year  ATT(g,t)  estimates with robust standard errors and confidence intervals.{p_end}
 
 {synopt:{opt save(filename)}}Save estimation results as a .dta file.{p_end}
