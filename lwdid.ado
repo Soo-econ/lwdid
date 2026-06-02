@@ -1,4 +1,4 @@
-*! version 2.3 31May2026
+*! version 2.4 1June2026
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
@@ -40,6 +40,7 @@ program define lwdid, eclass sortpreserve
 			 RIREPS(integer 999)                 ///
 			 RISEED(string)                      ///
 			 ATTGT                               ///
+			 PRE(integer -1)                     ///
 			]
 
 		marksample touse, novarlist
@@ -77,6 +78,19 @@ program define lwdid, eclass sortpreserve
 		}
 
 	
+		*-- validate pre() option
+		if `pre' != -1 {
+			if `pre' < 1 {
+				di as err "pre() must be a positive integer (number of pre-treatment periods to use)."
+				exit 198
+			}
+			local rolling_lo = lower("`rolling'")
+			if "`rolling_lo'" == "detrend" & `pre' < 2 {
+				di as err "pre() must be at least 2 when rolling(detrend) is specified (need >= 2 periods to estimate slope)."
+				exit 198
+			}
+		}
+
 	*-- DISPATCH (small option)
 		if "`small'" != "" {
 			
@@ -535,7 +549,7 @@ program define lwdid_small_single, eclass
 			
 	di as txt _n "[2] Period-by-period ATTs"
 
-			local __maxrows = 15
+			local __maxrows = 40
 			quietly count
 			local __nrows = r(N)
 
@@ -569,7 +583,7 @@ program define lwdid_small_single, eclass
 								}
 			else {
 					di as txt "{hline 68}"
-					di as txt "Note: The period-by-period table is not displayed because it has more than 15 rows."
+					di as txt "Note: The period-by-period table is not displayed because it has more than 40 rows."
 					di as txt "Note: This avoids lengthy output for monthly or quarterly data."
 
 					if "`save'" != "" {
@@ -1180,6 +1194,7 @@ program define lwdid_large, eclass
          RIREPS(integer 999)                ///
          RISEED(string)                      ///
          ATTGT                               ///
+         PRE(integer -1)                     ///
         ]
 
 		marksample touse, novarlist
@@ -1228,6 +1243,9 @@ program define lwdid_large, eclass
 		* --- LARGE-N PATH  (wild bootstrap, staggered, influence-function)
 			di as txt "------------------------------------------------------------"
 			di as txt " lwdid [large-N mode]  rolling=`rolling'  method=`method'"
+			if `pre' > 0 {
+				di as txt " pre(`pre'): using last `pre' pre-treatment period(s) for outcome transformation"
+			}
 			di as txt "------------------------------------------------------------"
 
 
@@ -1341,11 +1359,20 @@ program define lwdid_large, eclass
 					tempvar Sy_pre n_pre
 
 					* Total sum and count of pre-treatment outcomes for each unit
-					bys `id': egen double `Sy_pre' = total(cond(`tvar' < `g' & `yobs', `y', 0)) if `touse'
-					bys `id': egen double `n_pre'  = total(cond(`tvar' < `g' & `yobs', 1, 0)) if `touse'
+					* If pre() specified, restrict to the most recent pre() periods (t in [g-pre, g-1])
+					* Otherwise use all pre-treatment periods (t < g)
+					if `pre' > 0 {
+						local g_pre_lo = `g' - `pre'
+						bys `id': egen double `Sy_pre' = total(cond(`tvar' >= `g_pre_lo' & `tvar' < `g' & `yobs', `y', 0)) if `touse'
+						bys `id': egen double `n_pre'  = total(cond(`tvar' >= `g_pre_lo' & `tvar' < `g' & `yobs', 1, 0)) if `touse'
+					}
+					else {
+						bys `id': egen double `Sy_pre' = total(cond(`tvar' < `g' & `yobs', `y', 0)) if `touse'
+						bys `id': egen double `n_pre'  = total(cond(`tvar' < `g' & `yobs', 1, 0)) if `touse'
+					}
 
 					* Pre- and post-treatment periods:
-					* Subtract the mean over all pre-treatment periods
+					* Subtract the mean over selected pre-treatment periods
 					replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
 						if `touse' & `yobs' & `n_pre' > 0 ///
 						& !missing(`Sy_pre', `n_pre')
@@ -1355,14 +1382,35 @@ program define lwdid_large, eclass
 					else {  // detrend: use one fixed pre-treatment trend for both pre and post
 						tempvar SyP StP SttP StyP nP denomP bP aP fitP
 
-						* Pre-treatment totals for each unit (using all periods t < g)
-						bys `id': egen double `SyP'  = max(cond(`tvar' < `g', `cy',  .)) if `touse'
-						bys `id': egen double `StP'  = max(cond(`tvar' < `g', `ct',  .)) if `touse'
-						bys `id': egen double `SttP' = max(cond(`tvar' < `g', `ctt', .)) if `touse'
-						bys `id': egen double `StyP' = max(cond(`tvar' < `g', `cty', .)) if `touse'
-						bys `id': egen double `nP'   = max(cond(`tvar' < `g', `cn',  .)) if `touse'
+						* Pre-treatment totals for each unit
+						* If pre() specified, transformation window (t in [g-pre, g-1])
+						* Otherwise use all pre-treatment periods (t < g)
+						if `pre' > 0 {
+							local g_pre_lo = `g' - `pre'
+							* Use running cumulative sums: take values AT t = g-1 minus values AT t = g_pre_lo-1
+							* Simpler approach: use conditional totals directly
+							tempvar cy_w ct_w ctt_w cty_w cn_w
+							bys `id' (`tvar'): gen double `cy_w'  = sum(cond(`tvar' >= `g_pre_lo' & `tvar' < `g' & `yobs', `y',        0)) if `touse'
+							bys `id' (`tvar'): gen double `ct_w'  = sum(cond(`tvar' >= `g_pre_lo' & `tvar' < `g' & `yobs', `tvar',     0)) if `touse'
+							bys `id' (`tvar'): gen double `ctt_w' = sum(cond(`tvar' >= `g_pre_lo' & `tvar' < `g' & `yobs', `tvar'^2,   0)) if `touse'
+							bys `id' (`tvar'): gen double `cty_w' = sum(cond(`tvar' >= `g_pre_lo' & `tvar' < `g' & `yobs', `tvar'*`y', 0)) if `touse'
+							bys `id' (`tvar'): gen double `cn_w'  = sum(cond(`tvar' >= `g_pre_lo' & `tvar' < `g' & `yobs', 1,          0)) if `touse'
+							bys `id': egen double `SyP'  = max(cond(`tvar' < `g', `cy_w',  .)) if `touse'
+							bys `id': egen double `StP'  = max(cond(`tvar' < `g', `ct_w',  .)) if `touse'
+							bys `id': egen double `SttP' = max(cond(`tvar' < `g', `ctt_w', .)) if `touse'
+							bys `id': egen double `StyP' = max(cond(`tvar' < `g', `cty_w', .)) if `touse'
+							bys `id': egen double `nP'   = max(cond(`tvar' < `g', `cn_w',  .)) if `touse'
+							drop `cy_w' `ct_w' `ctt_w' `cty_w' `cn_w'
+						}
+						else {
+							bys `id': egen double `SyP'  = max(cond(`tvar' < `g', `cy',  .)) if `touse'
+							bys `id': egen double `StP'  = max(cond(`tvar' < `g', `ct',  .)) if `touse'
+							bys `id': egen double `SttP' = max(cond(`tvar' < `g', `ctt', .)) if `touse'
+							bys `id': egen double `StyP' = max(cond(`tvar' < `g', `cty', .)) if `touse'
+							bys `id': egen double `nP'   = max(cond(`tvar' < `g', `cn',  .)) if `touse'
+						}
 
-						* Slope and intercept from the full pre-treatment sample
+						* Slope and intercept from the selected pre-treatment sample
 						gen double `denomP' = `nP' * `SttP' - (`StP')^2 if `touse'
 						gen double `bP' = .
 						replace `bP' = (`nP' * `StyP' - `StP' * `SyP') / `denomP' ///
@@ -1388,11 +1436,14 @@ program define lwdid_large, eclass
 					* --- Anchor period used internally for estimation/output
 					* Keep 0 here so pre-period cell regressions still run.
 					* Saved y`g'd variables are changed to missing after estimation below.
+					* Anchor period(s) = the most recent pre-treatment period(s) used for normalization.
 					if "`rolling'" == "demean" {
+						* anchor = r = -1 only (the period just before treatment)
 						replace y`g'd = 0 if `touse' & !missing(y`g'd) ///
 							& (`tvar' - `g' == -1)
 					}
 					else if "`rolling'" == "detrend" {
+						* anchor = r = -1 and r = -2 (two periods just before treatment)
 						replace y`g'd = 0 if `touse' & !missing(y`g'd) ///
 							& inlist(`tvar' - `g', -2, -1)
 					}
