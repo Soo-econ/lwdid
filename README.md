@@ -1,12 +1,12 @@
 # lwdid
 
-`lwdid` is a Stata package that implements the **rolling difference-in-differences methods** developed in Lee and Wooldridge ([2026a](https://doi.org/10.1080/07350015.2026.2683047), [2026b](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)). These methods transform the original panel-data problem into a sequence of
+`lwdid` is a Stata package that implements the **rolling difference-in-differences methods** developed in **Lee and Wooldridge ([2026a](https://doi.org/10.1080/07350015.2026.2683047), [2026b](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686))**. These methods transform the original panel-data problem into a sequence of
 cross-sectional treatment-effect problems by constructing transformed outcomes
 that remove unit-specific pre-treatment means or trends.
 
 `lwdid` is a user-written Stata command freely available for academic and research use.
 
-A companion manuscript describing the method and software is available at SSRN: Hur, Lee, and Wooldridge ([2026](https://dx.doi.org/10.2139/ssrn.6502558)). The manuscript provides details on the implementation of `lwdid` and illustrates its use through several empirical examples. Users interested in applying the command are encouraged to consult the manuscript for a more complete discussion.
+A companion manuscript describing the method and software is available at SSRN: [Hur, Lee, and Wooldridge (2026)](https://dx.doi.org/10.2139/ssrn.6502558). The manuscript provides details on the implementation of `lwdid` and illustrates its use through several empirical examples. Users interested in applying the command are encouraged to consult the manuscript for a more complete discussion.
 
 This page provides a concise overview of the command syntax, along with selected examples from the companion manuscript that users can adapt directly for their own applications.
 
