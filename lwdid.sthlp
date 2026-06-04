@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1 16APR2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
+{* *! version 2.4 1JUNE2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
 {viewerjumpto "Syntax" "lwdid##syntax"}{...}
 {viewerjumpto "Description" "lwdid##description"}{...}
 {viewerjumpto "Options" "lwdid##options"}{...}
@@ -67,6 +67,8 @@ Required unless {cmd:small} is specified.{p_end}
 By default, all available pre-treatment periods are used.{break}
 For example, {cmd:pre(1)} uses only the last pre-treatment period, while
 {cmd:pre(3)} uses the last three pre-treatment periods.{p_end}
+
+{synopt:{opt never}}{it:Large-N only.} Uses only never-treated units as controls; by default, {cmd:lwdid} uses both never-treated and not-yet-treated units.{p_end}
 
 {synopt:{opt attgt}}{it:Large-N only.}  Reports cohort-by-year  ATT(g,t)  estimates with robust standard errors and confidence intervals.{p_end}
 
