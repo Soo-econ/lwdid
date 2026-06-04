@@ -1,32 +1,62 @@
 # lwdid
 
-A Stata package that implements the **Rolling Difference-in-Differences Estimator** proposed by Lee and Wooldridge ([2025a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518), [2026a](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)). It provides fast and flexible estimation for staggered and common treatment timing in panel data, and offers a unified implementation that accomodates both standard large-N asymptotic settings and cases with small cross-sectional units, where conventional large-N inference may not be reliable.
+`lwdid` is a Stata package that implements the **rolling difference-in-differences methods** developed in Lee and Wooldridge ([2026a](https://doi.org/10.1080/07350015.2026.2683047), [2026b](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686)). These methods transform the original panel-data problem into a sequence of
+cross-sectional treatment-effect problems by constructing transformed outcomes
+that remove unit-specific pre-treatment means or trends.
 
 `lwdid` is a user-written Stata command freely available for academic and research use.
 
-A companion manuscript describing the method and software is available at SSRN: Lee and Wooldridge ([2026b](https://dx.doi.org/10.2139/ssrn.6502558)).
+A companion manuscript describing the method and software is available at SSRN: Hur, Lee, and Wooldridge ([2026](https://dx.doi.org/10.2139/ssrn.6502558)). The manuscript provides details on the implementation of `lwdid` and illustrates its use through several empirical examples. Users interested in applying the command are encouraged to consult the manuscript for a more complete discussion.
+
+This page provides a concise overview of the command syntax, along with selected examples from the companion manuscript that users can adapt directly for their own applications.
 
 ## 🚨 Important Update Notice
+
+> **Version 2.4 of `lwdid.ado` is now available on GitHub. — June 1, 2026**
 >
-> **Updated `lwdid.ado` file now available in SSC. — April 27, 2026**
->
-> ```stata
-> ssc install lwdid, replace
-> ```
-> To confirm that the updated version is installed, run:
+> You can install the latest GitHub version by running:
 >
 > ```stata
-> which lwdid
+> net install lwdid, from("https://raw.githubusercontent.com/Soo-econ/lwdid/main/") replace
 > ```
-> The output should show:
-> ```stata
-> *! version 2.2 April 27 2026
-> ```
-> > Key updates include:
+ An update request has also been submitted to SSC. I will update this page once the SSC version becomes available.
+>
+> Key updates in version 2.4 include:
+>
+> - new Large-\(N\) estimation options;
+> - `pre(#)`: allows users to choose how many pre-treatment periods are used in the outcome transformation. For example, `pre(1)` uses only the last pre-treatment period, while `pre(3)` uses the last three pre-treatment periods;
+> - `attgt`: reports group-time specific \(ATT(g,t)\) estimates. By default, `lwdid` reports event-time aggregated \(WATT(r)\) estimates only;
+> - `never`: uses only never-treated units as the comparison group. By default, `lwdid` uses both never-treated and not-yet-treated units.
+>
+> **Previous SSC update — April 27, 2026**
 > - improved handling of large datasets and large unit identifiers, including cases with values such as `1,000,000`;
-> - revised result-table presentation for cleaner reporting; 
-> - updated event-study plotting and result-table reporting for the Large-N `rolling(demean)` procedure;
+> - revised result-table presentation for cleaner reporting;
+> - updated event-study plotting and result-table reporting for the Large-\(N\) `rolling(demean)` procedure;
 > - improved storage of additional results through the `save()` option.
+
+
+# References
+
+If you use `lwdid` in your research, please cite the appropriate paper(s) from the list below.
+
+**Large-N Procedure**<br>
+
+Lee, S. J. and Wooldridge, J. M. (2026a), 
+“A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data,” 
+*Journal of Business and Economic Statistics*, [forthcoming](https://doi.org/10.1080/07350015.2026.2683047).
+> Working Paper, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
+
+**Small-N Procedure** <br>
+Lee, S. J. and Wooldridge, J. M. (2026b), 
+"_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
+Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
+> Under review
+
+**lwdid: command guidance** <br>
+Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026), 
+"_Rolling Difference-in-Differences Estimation for Small and Large Panels,"
+Working Paper_, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
+
 
 
 <br>
@@ -37,7 +67,7 @@ A companion manuscript describing the method and software is available at SSRN: 
 - [Examples: Small-N](#small-n-case)
 - [Examples: Large-N](#large-n-case)
 - [Contact and Updates](#contact-and-updates)
-- [Citation](#citation)
+- [References](#references)
 
 <br>
 
@@ -392,28 +422,6 @@ Note that `t_stat` and `p_value` are **pointwise** quantities, while `low_ci` an
 <img src="subfolder/ex8.png">
 </div>
 
-
-# Citation
-
-If you use `lwdid` in your research, please cite the following papers:
-
-**Large-N Procedure**<br>
-
-Soo Jeong Lee, and Jeffrey M. Wooldridge (2025a),
-"_A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data,"
-Working Paper_, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
-> Revise and resubmit at *Journal of Business & Economic Statistics*.
-
-**Small-N Procedure** <br>
-Soo Jeong Lee, and Jeffrey M. Wooldridge (2026a),
-"_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
-Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
-> Under review
-
-**lwdid: command guidance** <br>
-Soo Jeong Lee, and Jeffrey M. Wooldridge (2026b),
-"_Rolling Difference-in-Differences Estimation for Small and Large Panels,"
-Working Paper_, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
 
 
 <br>
