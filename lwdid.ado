@@ -1,4 +1,4 @@
-*! version 2.4 1June2026
+*! version 2.4 1 June 2026
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
@@ -41,6 +41,7 @@ program define lwdid, eclass sortpreserve
 			 RISEED(string)                      ///
 			 ATTGT                               ///
 			 PRE(integer -1)                     ///
+			 NEVER                               ///
 			]
 
 		marksample touse, novarlist
@@ -1195,6 +1196,7 @@ program define lwdid_large, eclass
          RISEED(string)                      ///
          ATTGT                               ///
          PRE(integer -1)                     ///
+         NEVER                               ///
         ]
 
 		marksample touse, novarlist
@@ -1245,6 +1247,9 @@ program define lwdid_large, eclass
 			di as txt " lwdid [large-N mode]  rolling=`rolling'  method=`method'"
 			if `pre' > 0 {
 				di as txt " pre(`pre'): using last `pre' pre-treatment period(s) for outcome transformation"
+			}
+			if "`never'" != "" {
+				di as txt " never: comparing each cohort g to never-treated only"
 			}
 			di as txt "------------------------------------------------------------"
 
@@ -1493,13 +1498,26 @@ program define lwdid_large, eclass
 				quietly replace `cont' = 0 if `touse'
 
 				if `t' < `g' {
-					* pre-period: never-treated + cohort g + cohorts treated after g
-					quietly replace `cont' = (`gvar' == 0 | `gvar' == `g' | `gvar' > `g') if `touse'
+					* pre-period:
+					* never: never-treated + cohort g only
+					* default: never-treated + cohort g + cohorts treated after g
+					if "`never'" != "" {
+						quietly replace `cont' = (`gvar' == 0 | `gvar' == `g') if `touse'
+					}
+					else {
+						quietly replace `cont' = (`gvar' == 0 | `gvar' == `g' | `gvar' > `g') if `touse'
+					}
 				}
 				else {
-					* post-period: never-treated + cohort g + cohorts treated after g
-					* and still untreated at time t
-					quietly replace `cont' = (`gvar' == 0 | `gvar' == `g' | (`gvar' > `g' & `gvar' > `t')) if `touse'
+					* post-period:
+					* never: never-treated + cohort g only
+					* default: never-treated + cohort g + cohorts treated after g (and still untreated at t)
+					if "`never'" != "" {
+						quietly replace `cont' = (`gvar' == 0 | `gvar' == `g') if `touse'
+					}
+					else {
+						quietly replace `cont' = (`gvar' == 0 | `gvar' == `g' | (`gvar' > `g' & `gvar' > `t')) if `touse'
+					}
 				}
 
 				quietly count if `touse' & `fvar_`t'' & `cont'
@@ -1785,8 +1803,9 @@ program define lwdid_large, eclass
 						}
 							postclose `pf'
 
-						* --- Clean up __lwdid_cx_* centered X variables
+						* --- Clean up __lwdid_cx_* centered X variables and Stata factor variable artifacts
 						cap drop __lwdid_cx_*
+						cap drop _blank_*
 
 
 				* --- attgt: optional cell-specific ATT(g,t) table, before WATT aggregation
