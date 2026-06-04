@@ -24,7 +24,9 @@ This page provides a concise overview of the command syntax, along with selected
 > Key updates in version 2.4 include:
 >
 > - new Large-\(N\) estimation options;
-> - `pre(#)`: allows users to choose how many pre-treatment periods are used in the outcome transformation. For example, `pre(1)` uses only the last pre-treatment period, while `pre(3)` uses the last three pre-treatment periods;
+> - `pre(#)`: allows users to choose how many pre-treatment periods are used in the outcome transformation. For example, `pre(1)` uses only the period immediately prior to the
+intervention, while `pre(3)` uses the three periods immediately prior to
+the intervention.
 > - `attgt`: reports group-time specific \(ATT(g,t)\) estimates. By default, `lwdid` reports event-time aggregated \(WATT(r)\) estimates only;
 > - `never`: uses only never-treated units as the comparison group. By default, `lwdid` uses both never-treated and not-yet-treated units.
 >
