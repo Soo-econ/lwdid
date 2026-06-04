@@ -118,6 +118,14 @@ help lwdid
 
 ## **Optional Options**
 
+### Estimation Options for Large-\(N\) Panels
+
+| Option | Description |
+|-------|-------------|
+| `pre(#)` | **Large-\(N\) only.** Specifies the number of pre-treatment periods used for averaging or detrending. The default uses all available pre-treatment periods; `pre(1)` uses only the last pre-treatment period for demeaning, while detrending requires at least `pre(2)`. |
+| `never` | **Large-\(N\) only.** Uses only never-treated units as controls; the default also includes not-yet-treated units. |
+| `attgt` | **Large-\(N\) only.** Reports group-time specific \(ATT(g,t)\) estimates before aggregation to \(W\!ATT(r)\), with robust standard errors and confidence intervals. |
+
 ### Graph Options
 
 | Option | Description |
