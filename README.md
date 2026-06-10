@@ -12,17 +12,12 @@ This page provides a concise overview of the command syntax, along with selected
 
 ## 🚨 Important Update Notice
 
-> **Version 2.4 of `lwdid.ado` is now available on GitHub. — June 1, 2026**
->
-> You can install the latest GitHub version by running:
+> **Version 2.4 (June 1, 2026) of `lwdid.ado` is now available on SSC**
 >
 > ```stata
-> net install lwdid, from("https://raw.githubusercontent.com/Soo-econ/lwdid/main/") replace
+> ssc install lwdid, replace
 > ```
- An update request has also been submitted to SSC. I will update this page once the SSC version becomes available.
->
-> Key updates in version 2.4 include:
->
+> **Key updates in version 2.4 include:**
 > - new Large-\(N\) estimation options;
 > - `pre(#)`: allows users to choose how many pre-treatment periods are used in the outcome transformation. For example, `pre(1)` uses only the period immediately prior to the
 intervention, while `pre(3)` uses the three periods immediately prior to
@@ -358,11 +353,11 @@ use lw_walmart, clear
 
 Then run:
 ```
-lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year) ///
+lwdid log_wholesale_emp x1 x2 x3, ivar(cid) tvar(year) gvar(first_year) ///
 rolling(detrend) method(ipwra) graph 
 ```
 
-Here, `ivar(fips)` identifies states. the dataset includes __multiple treatment groups__, corresponding to a **staggered adoption setting**. If there is only a single treated group, `lwdid` automatically detects this and applies the common timing procedure.
+Here, `ivar(cid)` identifies states. the dataset includes __multiple treatment groups__, corresponding to a **staggered adoption setting**. If there is only a single treated group, `lwdid` automatically detects this and applies the common timing procedure.
 
 In this example, we use `rolling(detrend)` because the __parallel trends (PT)__ assumption appears to be violated, and apply the the doubly-robust estimator via `method(ipwra)`.
 
@@ -385,7 +380,7 @@ But, similarly, you can customize your graphs with `gopts` and `scheme` options:
 ### [Example 2] Customizing graphs and saving results
 
 ```stata
-lwdid log_wholesale_emp x1 x2 x3, ivar(fips) tvar(year) gvar(first_year) ///
+lwdid log_wholesale_emp x1 x2 x3, ivar(cid) tvar(year) gvar(first_year) ///
       rolling(detrend) method(ipwra) save(myresult) graph scheme(s2color) ///
       gopts( ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart opening on ln(Wholesale Emp)") ///
 				ylabel(-.4(.1).25, format(%3.1f) angle(horizontal)) ///
