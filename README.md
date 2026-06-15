@@ -10,21 +10,28 @@ A companion manuscript describing the method and software is available at SSRN: 
 
 This page provides a concise overview of the command syntax, along with selected examples from the companion manuscript that users can adapt directly for their own applications.
 
-## 🚨 Important Update Notice
+## 🚨 Important Update Note
 
-> **Version 2.4 (June 1, 2026) of `lwdid.ado` is now available on SSC**
+> **Version 2.4.2 (June 15, 2026) of `lwdid.ado` is now available on GitHub. The SSC update has been requested, and I will announce it once the update is complete.**
 >
 > ```stata
 > ssc install lwdid, replace
 > ```
-> **Key updates in version 2.4 include:**
+> 
+> **This version 2.4.2 include:**
+> 
+> - Fixed bugs; a potential naming conflict by no longer saving internally generated residualized outcome variables.
+> - For the large-N case, users can use the `ydot` option to save the residualized/transformed outcomes for additional analyses.
+> - The small-N `graph` option now displays y-axis labels with at least two decimal places.
+>   
+> **Previous SSC update — June 1, 2026**
 > - new Large-\(N\) estimation options;
 > - `pre(#)`: allows users to choose how many pre-treatment periods are used in the outcome transformation. For example, `pre(1)` uses only the period immediately prior to the
 intervention, while `pre(3)` uses the three periods immediately prior to
 the intervention.
 > - `attgt`: reports group-time specific \(ATT(g,t)\) estimates. By default, `lwdid` reports event-time aggregated \(WATT(r)\) estimates only;
 > - `never`: uses only never-treated units as the comparison group. By default, `lwdid` uses both never-treated and not-yet-treated units.
->
+>   
 > **Previous SSC update — April 27, 2026**
 > - improved handling of large datasets and large unit identifiers, including cases with values such as `1,000,000`;
 > - revised result-table presentation for cleaner reporting;
@@ -152,6 +159,8 @@ help lwdid
 | `pre(#)` | **Large-\(N\) only.** Specifies the number of pre-treatment periods used for averaging or detrending. The default uses all available pre-treatment periods; `pre(1)` uses only the last pre-treatment period for demeaning, while detrending requires at least `pre(2)`. |
 | `never` | **Large-\(N\) only.** Uses only never-treated units as controls; the default also includes not-yet-treated units. |
 | `attgt` | **Large-\(N\) only.** Reports group-time specific \(ATT(g,t)\) estimates before aggregation to \(W\!ATT(r)\), with robust standard errors and confidence intervals. |
+| `ydot` | **Large-(N) only.** Saves the internally generated residualized/transformed outcome variables for additional analyses. By default, these variables are not saved. |
+
 
 ### Graph Options
 
