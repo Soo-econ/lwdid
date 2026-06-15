@@ -72,6 +72,8 @@ For example, {cmd:pre(1)} uses only the last pre-treatment period, while
 
 {synopt:{opt attgt}}{it:Large-N only.}  Reports cohort-by-year  ATT(g,t)  estimates with robust standard errors and confidence intervals.{p_end}
 
+{synopt:{opt ydot}}{it:Large-N only.}  Saves the cohort-specific residualized outcome variables used to construct the ATT(g,t) estimates. By default, these variables are not saved to avoid conflicts with existing user variables.{p_end}
+
 {synopt:{opt save(filename)}}Save estimation results as a .dta file.{p_end}
 
 {synopt:{opt graph}}Displays graphical results.{break}
