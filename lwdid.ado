@@ -1,19 +1,17 @@
-*! version 2.4 1 June 2026
+*! version 2.4.2 15 June 2026
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
-*! lwdid GitHub repository and README: https://github.com/Soo-econ/lwdid
+*! lwdid GitHub repository: https://github.com/Soo-econ/lwdid
 
 set more off
 *set trace on
-set trace off
+*set trace off
 
 capture program drop lwdid
 capture program drop lwdid_small_single
 capture program drop lwdid_small_staggered
 capture program drop lwdid_large
-
-
 
 **# [1] MAIN PROGRAM: lwdid 
 ***>> Dispatches to the appropriate subroutine: lwdid_small_single/lwdid_small_staggered/lwdid_large
@@ -42,6 +40,7 @@ program define lwdid, eclass sortpreserve
 			 ATTGT                               ///
 			 PRE(integer -1)                     ///
 			 NEVER                               ///
+			 YDOT                                ///
 			]
 
 		marksample touse, novarlist
@@ -149,6 +148,7 @@ program define lwdid_small_single, eclass
 			 RIREPS(integer 999)                ///
 			 RISEED(string)                      ///
 			 ATTGT                               ///
+			 YDOT                                ///
 			]
 
 	
@@ -234,9 +234,8 @@ program define lwdid_small_single, eclass
 		quietly summarize `gvar' if `gvar' > 0 & `touse', meanonly
 		local gyear = r(min)
 
-		* treatment indicator
-		qui capture drop d_
-		qui gen byte d_ = (`gvar' > 0)
+		* treatment indicator is created only inside preserve below
+		* to avoid modifying or overwriting variables in the user's data.
 
 		* post indicator
 		qui gen byte `post_' = (`timevar' >= `gyear') if `touse'
@@ -254,6 +253,9 @@ program define lwdid_small_single, eclass
 		
 		preserve
 		qui keep if `touse'
+		qui capture drop d_
+		qui gen byte d_ = (`gvar' > 0) if `touse'
+		qui replace d_ = 0 if missing(d_)
 		qui drop if missing(`y', `id', `post_', d_)
 
 	* ---  (2) Build time index: yearly or year-quarter, plus nice tq label
@@ -283,6 +285,7 @@ program define lwdid_small_single, eclass
         qui levelsof `id', local(IDlist)
 
         quietly foreach ii of local IDlist {
+            cap drop __fit
             if "`rolling'"=="demean" {
                 regress `y' if `id'==`ii' & `post_'==0
                 predict double __fit if `id'==`ii', xb
@@ -320,6 +323,7 @@ program define lwdid_small_single, eclass
 
 
 	* ---  Collapse to first post cross-section & overall ATT
+		qui capture drop ydot_postavg firstpost
 		quietly bysort `id': egen double ydot_postavg = mean(cond(`post_'==1, `ydot', .))
 		qui label var ydot_postavg "mean(ydot) over post periods, by id"
 
@@ -381,6 +385,7 @@ program define lwdid_small_single, eclass
 				   quietly summarize `x' if d_==1, meanonly
 					quietly gen double `xc' = `x' - r(mean)
 
+					qui capture drop D_`x'
 					gen double D_`x' = d_ * `xc'
 					label var D_`x' "d_ × centered(`x')"
 
@@ -673,6 +678,7 @@ program define lwdid_small_single, eclass
 
 	* --- Control mean trajectory & optional graph
 		* Always compute control-group mean over time (d==0)
+			qui capture drop y_dot_cont y_dot_tr
 			qui gen double `ctrlSum' = `ydot' if d_==0
 			bysort `tindex': egen double y_dot_cont = mean(`ctrlSum')
 			label var y_dot_cont "Control mean of ydot (d==0)"
@@ -853,7 +859,7 @@ program define lwdid_small_single, eclass
 				}
 			}
 
-			local yfmt = cond(`ystep' >= 1, "%9.0f", "%9.1f")
+			local yfmt "%9.2f"
 			local YL   "ylabel(`ymin2'(`ystep')`ymax2', format(`yfmt') nogrid)"
 
 			local mono = 0
@@ -944,6 +950,7 @@ program define lwdid_small_staggered, eclass
          RIREPS(integer 999)                 ///
          RISEED(string)                      ///
          ATTGT                               ///
+         YDOT                                ///
         ]
 
     marksample touse, novarlist
@@ -1011,9 +1018,10 @@ program define lwdid_small_staggered, eclass
 		quietly egen `cohorttag' = tag(`gvar') if `gvar' > 0 & `touse'
 		quietly count if `cohorttag'
 		local n_cohort = r(N)
-
+		di as txt "------------------------------------------------------------"
 		di as txt "gvar(): `n_cohort' cohorts detected -> Staggered adoption"
 		di as txt "lwdid [small-N mode] rolling=`rolling'"
+		di as txt "------------------------------------------------------------"
 
 		*-- graph not yet implemented
 		if "`graph'" != "" {
@@ -1026,37 +1034,51 @@ program define lwdid_small_staggered, eclass
 		}
 
   quietly {
-        capture drop d_
-        gen byte d_ = (`gvar' != 0) if `touse'
-        qui replace d_ = 0 if missing(d_)
-        label var d_ "ever-treated indicator"
-
         preserve
             keep if `touse'
+            capture drop d_
+            gen byte d_ = (`gvar' != 0) if `touse'
+            qui replace d_ = 0 if missing(d_)
+            label var d_ "ever-treated indicator"
             drop if missing(`y', `ivar', `timevar')
 
-			
-			/* later
-			* --- reproducibility setup (only if RI requested) ---
-			if "`ri'" != "" {
-				quietly set rng mt64
+				/* later
+				* --- reproducibility setup (only if RI requested) ---
+				if "`ri'" != "" {
+					quietly set rng mt64
 
-				capture confirm number `riseed'
-				if _rc | missing(real("`riseed'")) {
-					local riseed = ceil(runiform()*1e6 + 1000*runiform())
+					capture confirm number `riseed'
+					if _rc | missing(real("`riseed'")) {
+						local riseed = ceil(runiform()*1e6 + 1000*runiform())
+					}
+
+					quietly set seed `riseed'
+					local reps = `rireps'
 				}
-
-				quietly set seed `riseed'
-				local reps = `rireps'
-			}
-			*/
+				*/
 
             *-- cohort list
             levelsof `gvar' if `gvar' > 0, local(Glist)
 
-            *-- create cohort-specific residualized outcomes
+            *-- cohort weights
+            tempvar gtemp
+            gen `gtemp' = `gvar'
+            replace `gtemp' = . if `gtemp' == 0
+            tab `gtemp', matcell(freqs)
+            matrix w = freqs / r(N)
+
+            *-- build ydot_bar (equation 7.18) without cohort-named variables
+            *-- Avoid cohort-specific local names that require nested macro expansion.
+            tempvar ydot_bar contsum
+            gen double `ydot_bar' = .
+            gen double `contsum' = 0
+
+            local i = 0
             foreach g of local Glist {
-                tempvar yhat
+                local ++i
+                scalar w_g = w[`i',1]
+
+                tempvar yhat ydotg ybar_tr ybar_co
                 gen double `yhat' = .
 
                 levelsof `id', local(IDlist)
@@ -1088,6 +1110,7 @@ program define lwdid_small_staggered, eclass
                     }
 
                     if _rc == 0 {
+                        cap drop __fit
                         predict double __fit if `id'==`idval', xb
                         replace `yhat' = __fit if `id'==`idval'
                         cap drop __fit
@@ -1097,47 +1120,24 @@ program define lwdid_small_staggered, eclass
                     }
                 }
 
-                gen double y`g'd = `y' - `yhat'
-                label var y`g'd "(rolling=`rolling') Residualized outcome cohort g=`g' "
-                drop `yhat'
+                gen double `ydotg' = `y' - `yhat'
+                label var `ydotg' "(rolling=`rolling') Residualized outcome cohort g=`g'"
+
+                *-- treated post average for cohort g
+                bysort `id': egen double `ybar_tr' = ///
+                    mean(cond(`timevar' >= `g' & d_==1, `ydotg', .))
+                replace `ydot_bar' = `ybar_tr' if `gvar' == `g'
+
+                *-- control weighted average for cohort g
+                bysort `id': egen double `ybar_co' = ///
+                    mean(cond(`timevar' >= `g' & d_==0, w_g*`ydotg', .))
+                replace `contsum' = `contsum' + `ybar_co'
+
+                drop `yhat' `ydotg' `ybar_tr' `ybar_co'
             }
 
-            *-- treated post averages
-			foreach g of local Glist {
-				bysort `id': egen double ybar_temp_`g' = ///
-					mean(cond(`timevar' >= `g' & d_==1, y`g'd, .))
-			}
-
-            *-- cohort weights
-            tempvar gtemp
-            gen `gtemp' = `gvar'
-            replace `gtemp' = . if `gtemp' == 0
-            tab `gtemp', matcell(freqs)
-            matrix w = freqs / r(N)
-
-            *-- control weighted averages
-            local i = 0
-            foreach g of local Glist {
-                local ++i
-                scalar w_g = w[`i',1]
-                bysort `id': egen double ybar_cont_`g' = ///
-                    mean(cond(`timevar' >= `g' & d_==0, w_g*y`g'd, .))
-            }
-
-            *-- build ydot_bar (equation 7.18)
-            gen double ydot_bar = .
-
-            foreach g of local Glist {
-                replace ydot_bar = ybar_temp_`g' if `gvar' == `g'
-            }
-
-            gen double __contsum = 0
-            foreach g of local Glist {
-                replace __contsum = __contsum + ybar_cont_`g'
-            }
-
-            qui replace ydot_bar = __contsum if d_==0
-            drop __contsum
+            qui replace `ydot_bar' = `contsum' if d_==0
+            drop `contsum'
 
             *-- first treated cohort
             summarize `gvar' if `gvar'>0, meanonly
@@ -1147,12 +1147,12 @@ program define lwdid_small_staggered, eclass
 			summarize `timevar' if `timevar'>=`gmin', meanonly
 			local tpost1 = r(min)
 
-			qui regress ydot_bar d_ if `timevar'==`tpost1'
+			qui regress `ydot_bar' d_ if `timevar'==`tpost1'
     }
 
     di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
 
-    regress ydot_bar d_ if `timevar' == `gmin'
+    regress `ydot_bar' d_ if `timevar' == `gmin'
     matrix b = e(b)
     matrix V = e(V)
 
@@ -1197,6 +1197,7 @@ program define lwdid_large, eclass
          ATTGT                               ///
          PRE(integer -1)                     ///
          NEVER                               ///
+         YDOT                                ///
         ]
 
 		marksample touse, novarlist
@@ -1233,8 +1234,15 @@ program define lwdid_large, eclass
 				di as err "ivar() contains missing values in the estimation sample."
 				exit 459
 			}
-			tempvar __id
+			tempvar __id __xttime
 			quietly egen long `__id' = group(`ivar') if `touse'
+			* Give observations outside the estimation sample unique internal ids.
+			* xtset cannot be restricted by if/in, so leaving these ids missing
+			* makes all excluded observations look like one panel and can trigger
+			* "repeated time values within panel" when the command is run with if/in.
+			quietly replace `__id' = _N + _n if !`touse'
+			quietly gen double `__xttime' = `tvar' if `touse'
+			quietly replace `__xttime' = _n if !`touse'
 			local id `__id'
 				
 		* --- Graph-scheme option
@@ -1290,7 +1298,7 @@ program define lwdid_large, eclass
 			}
 
 			* --- Temporary internal xtset for lwdid computations
-			quietly xtset `id' `tvar'
+			quietly xtset `id' `__xttime'
 
 			* --- time range
 			qui su `tvar' if `touse', meanonly
@@ -1358,8 +1366,9 @@ program define lwdid_large, eclass
 				bys `id' (`tvar'): gen double `cn'  = sum(cond(`yobs', 1,          0))
 
 				foreach g of local cohorts {
-					capture drop y`g'd
-					gen double y`g'd = . if `touse'
+					tempvar __y`g'd
+					local yvarname_`g' `__y`g'd'
+					qui gen double `yvarname_`g'' = . if `touse'
 				if ("`rolling'" == "demean") {
 					tempvar Sy_pre n_pre
 
@@ -1378,7 +1387,7 @@ program define lwdid_large, eclass
 
 					* Pre- and post-treatment periods:
 					* Subtract the mean over selected pre-treatment periods
-					replace y`g'd = `y' - (`Sy_pre'/`n_pre') ///
+					replace `yvarname_`g'' = `y' - (`Sy_pre'/`n_pre') ///
 						if `touse' & `yobs' & `n_pre' > 0 ///
 						& !missing(`Sy_pre', `n_pre')
 
@@ -1431,25 +1440,25 @@ program define lwdid_large, eclass
 							if `touse' & !missing(`aP', `bP')
 
 						* Apply the same detrending transformation to both pre and post periods
-						replace y`g'd = `y' - `fitP' ///
+						replace `yvarname_`g'' = `y' - `fitP' ///
 							if `touse' & `yobs' & !missing(`fitP')
 
 						drop `SyP' `StP' `SttP' `StyP' `nP' `denomP' `bP' `aP' `fitP'
 					}
-					label var y`g'd "(rolling=`rolling') Residualized outcome cohort g=`g' "
+					label var `yvarname_`g'' "(rolling=`rolling') Residualized outcome cohort g=`g' "
 
 					* --- Anchor period used internally for estimation/output
 					* Keep 0 here so pre-period cell regressions still run.
-					* Saved y`g'd variables are changed to missing after estimation below.
+					* If ydot is requested, saved y`g'd variables are set to missing at the anchor below.
 					* Anchor period(s) = the most recent pre-treatment period(s) used for normalization.
 					if "`rolling'" == "demean" {
 						* anchor = r = -1 only (the period just before treatment)
-						replace y`g'd = 0 if `touse' & !missing(y`g'd) ///
+						replace `yvarname_`g'' = 0 if `touse' & !missing(`yvarname_`g'') ///
 							& (`tvar' - `g' == -1)
 					}
 					else if "`rolling'" == "detrend" {
 						* anchor = r = -1 and r = -2 (two periods just before treatment)
-						replace y`g'd = 0 if `touse' & !missing(y`g'd) ///
+						replace `yvarname_`g'' = 0 if `touse' & !missing(`yvarname_`g'') ///
 							& inlist(`tvar' - `g', -2, -1)
 					}
 				}
@@ -1461,6 +1470,7 @@ program define lwdid_large, eclass
 					preserve
 					keep if `touse' & `gvar' > 0
 					keep if `touse' & `gvar' > 0
+					capture drop one Ng
 					bys `gvar' `id': gen byte one = (_n==1)
 					bys `gvar': egen Ng = total(one)
 					keep `gvar' Ng
@@ -1484,7 +1494,7 @@ program define lwdid_large, eclass
 				local cell_count = 0
 
 				quietly foreach g of local cohorts {
-					local yvar y`g'd
+					local yvar `yvarname_`g''
 					local dvar_g `dvar_`g''
 
 					local current_x_list ""
@@ -1803,9 +1813,7 @@ program define lwdid_large, eclass
 						}
 							postclose `pf'
 
-						* --- Clean up __lwdid_cx_* centered X variables and Stata factor variable artifacts
-						cap drop __lwdid_cx_*
-						cap drop _blank_*
+						* --- Tempvars are cleaned automatically; avoid wildcard drops that may touch user variables.
 
 
 				* --- attgt: optional cell-specific ATT(g,t) table, before WATT aggregation
@@ -2293,11 +2301,13 @@ program define lwdid_large, eclass
 							as txt _col(82) %9s __Ncells_disp[`__i']
 					}
 
-					di as txt "{hline 92}"
-					di as txt "Note: Pre_avg/Post_avg confidence intervals are pointwise normal."
-					di as txt "Note: Event-study confidence bands are simultaneous (reps = `reps')"
-					di as txt "; t statistics and p-values are pointwise normal."
-					
+				di as txt "{hline 92}"
+				di as txt "Note: Pre_avg/Post_avg are weighted averages of the contributing ATT(g,t) cells;"
+				di as txt "      their confidence intervals are pointwise normal."
+				di as txt "Note: For WATT(r) rows, [95% CI/band] reports simultaneous confidence bands"
+				di as txt "      (reps = `reps')."
+				di as txt "Note: t statistics and p-values are pointwise normal."
+
 					
 		* --- Graph
         if "`graph'" != "" {
@@ -2402,12 +2412,18 @@ program define lwdid_large, eclass
         }		
 			restore
 
-			* --- Final display cleanup for saved residualized outcomes
+			* --- Optionally save residualized outcomes y{g}d (only if ydot requested)
 			*     After all ATT/WATT calculations, set normalization periods to missing.
-			quietly {
-				foreach g of local cohorts {
-					capture confirm variable y`g'd
-					if !_rc {
+			if "`ydot'" != "" {
+				quietly {
+					foreach g of local cohorts {
+						capture confirm new variable y`g'd
+						if _rc {
+							noisily di as err "ydot requested, but variable y`g'd already exists. Drop or rename it before rerunning with ydot."
+							exit 110
+						}
+						gen double y`g'd = `yvarname_`g''
+						label var y`g'd "(rolling=`rolling') Residualized outcome cohort g=`g' "
 						if "`rolling'" == "demean" {
 							replace y`g'd = . if `touse' & !missing(y`g'd) ///
 								& (`tvar' - `g' == -1)
