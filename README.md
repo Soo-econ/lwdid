@@ -4,12 +4,66 @@
 cross-sectional treatment-effect problems by constructing transformed outcomes
 that remove unit-specific pre-treatment means or trends.
 
-`lwdid` is a user-written Stata command freely available for academic and research use.
-
 A companion manuscript describing the method and software is available at SSRN: [Hur, Lee, and Wooldridge (2026)](https://dx.doi.org/10.2139/ssrn.6502558). The manuscript provides details on the implementation of `lwdid` and illustrates its use through several empirical examples. Users interested in applying the command are encouraged to consult the manuscript for a more complete discussion.
 
 This page provides a concise overview of the command syntax, along with selected examples from the companion manuscript that users can adapt directly for their own applications.
 
+# Contents
+
+* [Important Update Note](#important-update-note)
+* [Citations](#citations)
+* [Installation](#installation)
+* [Syntax](#syntax)
+* [Examples: Small-N](#small-n-case)
+* [Examples: Large-N](#large-n-case)
+* [Contact and Updates](#contact-and-updates)
+
+<br>
+
+# Citations
+
+`lwdid` is a user-written Stata command freely available for academic and research use.
+
+If you use `lwdid`, or develop software based on the original `lwdid` Stata module, please acknowledge the original module and cite the relevant paper(s) below.
+
+**[1] Large-N procedure**
+Lee, S. J. and Wooldridge, J. M. (2026a). 
+A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data, 
+*Journal of Business and Economic Statistics*,  1–27. [https://doi.org/10.1080/07350015.2026.2683047](https://doi.org/10.1080/07350015.2026.2683047).
+> Working Paper, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
+
+```text
+Lee, S. J. and Wooldridge, J. M. (2026a). A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data. Journal of Business & Economic Statistics, 1–27. https://doi.org/10.1080/07350015.2026.2683047
+```
+
+**[2] Small-N procedure** <br>
+
+Lee, S. J. and Wooldridge, J. M. (2026b). 
+Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes.
+Working Paper, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
+
+```text
+Lee, S. J. and Wooldridge, J. M. (2026b). Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes. Working Paper. Available at SSRN 5325686
+```
+
+**[3] Original Stata module**<br>
+
+Lee, S. J. and Wooldridge, J. M. (2026c). `lwdid`: Stata module to implement rolling difference-in-differences estimator for small-(N) and large-(N) panel data, *Statistical Software Components* S459672, Boston College Department of Economics, revised 1 June 2026.
+
+```text
+Lee, S. J. and Wooldridge, J. M. (2026c). lwdid: Stata module to implement rolling difference-in-differences estimator for small-N and large-N panel data. Statistical Software Components S459672, Boston College Department of Economics, revised 1 June 2026.
+```
+
+**[4] lwdid: command guidance** <br>
+
+Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels.
+Working Paper, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
+
+```text
+Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels. Working Paper. Available at SSRN 6502558
+```
+
+<a id="important-update-note"></a>
 ## 🚨 Important Update Note
 
 > **Version 2.4.2 (June 15, 2026) of `lwdid.ado` is now available on GitHub. The SSC update has been requested, and I will announce it once the update is complete.**
@@ -37,45 +91,10 @@ the intervention.
 > - revised result-table presentation for cleaner reporting;
 > - updated event-study plotting and result-table reporting for the Large-\(N\) `rolling(demean)` procedure;
 > - improved storage of additional results through the `save()` option.
-
-
-# Citations
-
-If you use `lwdid` in your research, please cite the appropriate paper(s) from the list below.
-
-**Large-N Procedure**<br>
-
-Lee, S. J. and Wooldridge, J. M. (2026a). 
-A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data, 
-*Journal of Business and Economic Statistics*,  1–27. [https://doi.org/10.1080/07350015.2026.2683047](https://doi.org/10.1080/07350015.2026.2683047).
-> Working Paper, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
-
-**Small-N Procedure** <br>
-Lee, S. J. and Wooldridge, J. M. (2026b). 
-Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes.
-Working Paper, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
-
-**lwdid: the original Stata module as**<br>
-
-Lee, S. J. and Wooldridge, J. M. (2026c). `lwdid`: Stata module to implement rolling difference-in-differences estimator for small-(N) and large-(N) panel data, *Statistical Software Components* S459672, Boston College Department of Economics, revised 1 June 2026.
-
-**lwdid: command guidance** <br>
-Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels.
-Working Paper, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
-
-
-
+> - 
 <br>
 
-# Contents
-- [Installation](#installation)
-- [Syntax](#syntax)
-- [Examples: Small-N](#small-n-case)
-- [Examples: Large-N](#large-n-case)
-- [Contact and Updates](#contact-and-updates)
-- [Citations](#citations)
 
-<br>
 
 # Installation
 
