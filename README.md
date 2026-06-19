@@ -39,27 +39,29 @@ the intervention.
 > - improved storage of additional results through the `save()` option.
 
 
-# References
+# Citations
 
 If you use `lwdid` in your research, please cite the appropriate paper(s) from the list below.
 
 **Large-N Procedure**<br>
 
-Lee, S. J. and Wooldridge, J. M. (2026a), 
-“A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data,” 
-*Journal of Business and Economic Statistics*, [forthcoming](https://doi.org/10.1080/07350015.2026.2683047).
+Lee, S. J. and Wooldridge, J. M. (2026a). 
+A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data, 
+*Journal of Business and Economic Statistics*,  1–27. [https://doi.org/10.1080/07350015.2026.2683047](https://doi.org/10.1080/07350015.2026.2683047).
 > Working Paper, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
 
 **Small-N Procedure** <br>
-Lee, S. J. and Wooldridge, J. M. (2026b), 
-"_Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes,"
-Working Paper_, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
-> Under review
+Lee, S. J. and Wooldridge, J. M. (2026b). 
+Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes.
+Working Paper, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
+
+**lwdid: the original Stata module as**<br>
+
+Lee, S. J. and Wooldridge, J. M. (2026c). `lwdid`: Stata module to implement rolling difference-in-differences estimator for small-(N) and large-(N) panel data, *Statistical Software Components* S459672, Boston College Department of Economics, revised 1 June 2026.
 
 **lwdid: command guidance** <br>
-Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026), 
-"_Rolling Difference-in-Differences Estimation for Small and Large Panels,"
-Working Paper_, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
+Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels.
+Working Paper, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
 
 
 
@@ -71,7 +73,7 @@ Working Paper_, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502
 - [Examples: Small-N](#small-n-case)
 - [Examples: Large-N](#large-n-case)
 - [Contact and Updates](#contact-and-updates)
-- [References](#references)
+- [Citations](#citations)
 
 <br>
 
