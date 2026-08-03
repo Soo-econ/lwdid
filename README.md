@@ -66,8 +66,9 @@ Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Diffe
 <a id="important-update-note"></a>
 ## 🚨 Important Update Note
 
-> **Version 2.4.2 (June 15, 2026) of `lwdid.ado` is now available on GitHub. The SSC update has been requested, and I will announce it once the update is complete.**
->
+> **Version 2.4.2 (June 15, 2026) of `lwdid.ado` is now available on both GitHub and SSC.**
+> 
+> To install or update the package, type: 
 > ```stata
 > ssc install lwdid, replace
 > ```
