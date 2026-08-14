@@ -66,14 +66,19 @@ Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Diffe
 <a id="important-update-note"></a>
 ## 🚨 Important Update Note
 
-> **Version 2.4.2 (June 15, 2026) of `lwdid.ado` is now available on both GitHub and SSC.**
-> 
-> To install or update the package, type: 
-> ```stata
-> ssc install lwdid, replace
-> ```
-> 
-> **This version 2.4.2 include:**
+> **Version 2.4.3 (August 10, 2026) of `lwdid.ado` is now available on GitHub and is expected to be available on SSC by August 20, 2026.**
+>
+> **This update includes the following changes:**
+> - Small-(N) case: The graph option is now available, including for staggered treatment timing.
+> - Large-(N) case: To avoid confusion between pointwise and simultaneous inference for weighted ATT estimates:
+>   
+>   [1]	Event-type weighted ATT estimates are reported with their corresponding confidence intervals (CIs).
+>   
+> 	[2] Event-study graphs display simultaneous confidence bands (CBs).
+>
+> 	[3] When the save() option is specified, the saved .dta file includes the simultaneous confidence bands separately, making them directly available for further analysis or customized plotting.
+
+> **Previous SSC update-  June 15, 2026:**
 > 
 > - Fixed bugs; a potential naming conflict by no longer saving internally generated residualized outcome variables.
 > - For the large-N case, users can use the `ydot` option to save the residualized/transformed outcomes for additional analyses.
@@ -92,7 +97,7 @@ the intervention.
 > - revised result-table presentation for cleaner reporting;
 > - updated event-study plotting and result-table reporting for the Large-\(N\) `rolling(demean)` procedure;
 > - improved storage of additional results through the `save()` option.
-> - 
+>
 <br>
 
 
