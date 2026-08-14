@@ -1,4 +1,4 @@
-*! version 2.4.2 15 June 2026
+*! version 3 : 10 August 2026
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
@@ -1021,17 +1021,13 @@ program define lwdid_small_staggered, eclass
 		di as txt "------------------------------------------------------------"
 		di as txt "gvar(): `n_cohort' cohorts detected -> Staggered adoption"
 		di as txt "lwdid [small-N mode] rolling=`rolling'"
+		di as txt "Comparison group: never-treated units only"
 		di as txt "------------------------------------------------------------"
 
-		*-- graph not yet implemented
-		if "`graph'" != "" {
-			di as txt "------------------------------------------------------------"
-			di as err "graph option not yet supported for small-N staggered designs."
-			di as txt "This feature will be included in a future update of lwdid."
-			di as txt "Please run the command **without the graph option.**"
-			di as txt "------------------------------------------------------------"
-			exit 198
-		}
+		*-- graph support for small-N staggered designs
+		*-- The single-effect estimator and regression table below are unchanged.
+		tempfile __graph_cells
+		tempname __gpost
 
   quietly {
         preserve
@@ -1059,6 +1055,14 @@ program define lwdid_small_staggered, eclass
 
             *-- cohort list
             levelsof `gvar' if `gvar' > 0, local(Glist)
+
+            *-- Open a temporary cohort-by-exposure-time dataset only when graph is requested.
+            *-- These calculations are descriptive and do not alter ydot_bar or equation (7.18).
+            if "`graph'" != "" {
+                levelsof `timevar', local(Tlist)
+                postfile `__gpost' double cohort ryear tr_mean co_mean ///
+                    long Ng N_tr N_co using "`__graph_cells'", replace
+            }
 
             *-- cohort weights
             tempvar gtemp
@@ -1123,6 +1127,33 @@ program define lwdid_small_staggered, eclass
                 gen double `ydotg' = `y' - `yhat'
                 label var `ydotg' "(rolling=`rolling') Residualized outcome cohort g=`g'"
 
+                *-- Graph cells: align each cohort at exposure time r=t-g.
+                *-- The comparison group is never-treated, matching the single-effect estimator.
+                if "`graph'" != "" {
+                    tempvar __gtag
+                    egen byte `__gtag' = tag(`id') if `gvar' == `g'
+                    quietly count if `__gtag' == 1
+                    local Ng = r(N)
+                    drop `__gtag'
+
+                    foreach tt of local Tlist {
+                        local rr = `tt' - `g'
+
+                        quietly summarize `ydotg' if `timevar' == `tt' & `gvar' == `g', meanonly
+                        local trm = r(mean)
+                        local ntr = r(N)
+
+                        quietly summarize `ydotg' if `timevar' == `tt' & `gvar' == 0, meanonly
+                        local com = r(mean)
+                        local nco = r(N)
+
+                        if (`ntr' > 0 & `nco' > 0 & !missing(`trm') & !missing(`com')) {
+                            post `__gpost' (`g') (`rr') (`trm') (`com') ///
+                                (`Ng') (`ntr') (`nco')
+                        }
+                    }
+                }
+
                 *-- treated post average for cohort g
                 bysort `id': egen double `ybar_tr' = ///
                     mean(cond(`timevar' >= `g' & d_==1, `ydotg', .))
@@ -1134,6 +1165,10 @@ program define lwdid_small_staggered, eclass
                 replace `contsum' = `contsum' + `ybar_co'
 
                 drop `yhat' `ydotg' `ybar_tr' `ybar_co'
+            }
+
+            if "`graph'" != "" {
+                postclose `__gpost'
             }
 
             qui replace `ydot_bar' = `contsum' if d_==0
@@ -1150,21 +1185,105 @@ program define lwdid_small_staggered, eclass
 			qui regress `ydot_bar' d_ if `timevar'==`tpost1'
     }
 
-    di as txt "*--- Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)"
+		di as txt _n "{bf: Aggregated Single treatment effect (Lee & Wooldridge: equation 7.18)}"
 
-    regress `ydot_bar' d_ if `timevar' == `gmin'
-    matrix b = e(b)
-    matrix V = e(V)
+		regress `ydot_bar' d_ if `timevar' == `gmin'
 
-    ereturn post b V
-    ereturn scalar att = _b[d_]
-    ereturn scalar se_att = _se[d_]
-    ereturn local cmd     "lwdid"
-    ereturn local depvar  "`y'"
-    ereturn local rolling "`rolling'"
+		* Preserve regression results before ereturn post clears e().
+		matrix b = e(b)
+		matrix V = e(V)
+		local N    = e(N)
+		local df_r = e(df_r)
 
-    di as res "lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
+		* Repost the coefficient and variance matrix,
+		* retaining the sample size and residual degrees of freedom.
+		ereturn post b V, obs(`N') dof(`df_r') depname(`y')
+
+		ereturn scalar att    = _b[d_]
+		ereturn scalar se_att = _se[d_]
+
+		ereturn local cmd     "lwdid"
+		ereturn local depvar  "`y'"
+		ereturn local rolling "`rolling'"
+
+    di as res "*--- lwdid (rolling: `rolling') ATT = " %9.3f e(att) ///
               "   SE = " %9.3f e(se_att)
+
+    *------------------------------------------------------------
+    * Exposure-time graph: cohort-size-weighted residualized paths
+    * Runs after the original equation (7.18) regression table.
+    * No confidence intervals or pre-trends test are reported.
+    *------------------------------------------------------------
+    if "`graph'" != "" {
+        use "`__graph_cells'", clear
+        quietly count
+        if r(N) == 0 {
+            di as err "No valid cohort-by-exposure-time cells are available for the graph."
+            restore
+            exit 2000
+        }
+
+        gen double __tr_num = Ng * tr_mean
+        gen double __co_num = Ng * co_mean
+        collapse (sum) __tr_num __co_num weight_sum=Ng ///
+            (count) N_cohorts=cohort, by(ryear)
+
+        gen double y_dot_tr   = __tr_num / weight_sum
+        gen double y_dot_cont = __co_num / weight_sum
+        gen double gap        = y_dot_tr - y_dot_cont
+        sort ryear
+
+        label var ryear      "Exposure time"
+        label var y_dot_tr   "Cohort-size-weighted treated residualized outcome"
+        label var y_dot_cont "Cohort-size-weighted never-treated residualized outcome"
+        label var gap        "Weighted treated-minus-control residualized gap"
+        label var N_cohorts  "Number of contributing treated cohorts"
+
+        quietly summarize ryear, meanonly
+        local xmin = floor(r(min))
+        local xmax = ceil(r(max))
+        local xspan = `xmax' - `xmin'
+        if `xspan' <= 12       local xstep = 1
+        else if `xspan' <= 30  local xstep = 2
+        else if `xspan' <= 60  local xstep = 5
+        else                   local xstep = 10
+
+        local mono = 0
+        if strpos("`scheme'","mono") local mono = 1
+        if `mono' {
+            local col_tr black%80
+            local col_ct black%60
+            local pat_tr solid
+            local pat_ct dash
+            local gsch "scheme(s1mono)"
+        }
+        else {
+            local col_tr cranberry%90
+            local col_ct navy%70
+            local pat_tr solid
+            local pat_ct dash
+            local gsch ""
+            if "`scheme'" != "" local gsch "scheme(`scheme')"
+        }
+
+        twoway ///
+            (connected y_dot_tr ryear, msymbol(O) msize(small) ///
+                lpattern(`pat_tr') lcolor(`col_tr') mcolor(`col_tr') lwidth(medthick)) ///
+            (connected y_dot_cont ryear, msymbol(D) msize(small) ///
+                lpattern(`pat_ct') lcolor(`col_ct') mcolor(`col_ct') lwidth(medthick)), ///
+            xline(0, lcolor(gs8) lpattern(dash)) ///
+            yline(0, lcolor(gs12) lpattern(solid)) ///
+            xlabel(`xmin'(`xstep')`xmax', nogrid) ///
+            xtitle("Exposure time") ///
+            ytitle("Residualized outcome") ///
+            legend(order(1 "Eventually treated cohorts (weighted)" 2 "Never-treated units (weighted)") ///
+                pos(6) ring(1) col(2) size(small) ///
+                region(fcolor(none) lcolor(none))) ///
+            graphregion(color(white)) plotregion(color(white)) ///
+            `gsch' `gopts'
+
+        di as txt "Note: The graph shows cohort-size-weighted residualized paths by exposure time."
+    }
 
     restore
 end
@@ -1221,7 +1340,9 @@ program define lwdid_large, eclass
 				exit 198
 			}
 			
-			*--- Confidence bands
+			*--- Large-N inference
+			*    Tables report pointwise normal confidence intervals.
+			*    Event-study graphs report simultaneous confidence bands.
 			local ci_type "simultaneous"
 			
 			
@@ -1448,9 +1569,8 @@ program define lwdid_large, eclass
 					label var `yvarname_`g'' "(rolling=`rolling') Residualized outcome cohort g=`g' "
 
 					* --- Anchor period used internally for estimation/output
-					* Keep 0 here so pre-period cell regressions still run.
 					* If ydot is requested, saved y`g'd variables are set to missing at the anchor below.
-					* Anchor period(s) = the most recent pre-treatment period(s) used for normalization.
+					
 					if "`rolling'" == "demean" {
 						* anchor = r = -1 only (the period just before treatment)
 						replace `yvarname_`g'' = 0 if `touse' & !missing(`yvarname_`g'') ///
@@ -1824,9 +1944,8 @@ program define lwdid_large, eclass
 					qui keep if ryear >= 0
 					qui sort cohort time
 
-					format att se lower_ci upper_ci %10.0g
-					format tstat %7.2f
-					format pval %5.3f
+					* Printed large-N results use seven digits after the decimal point.
+					format att se lower_ci upper_ci tstat pval %12.7f
 
 					di as txt _n " {bf:Group-time ATT(g,t) estimates (post-period only)}"
 
@@ -1835,29 +1954,29 @@ program define lwdid_large, eclass
 					quietly levelsof cohort, local(__attgt_cohorts)
 
 					foreach __g of local __attgt_cohorts {
-						di as txt "{hline 86}"
+						di as txt "{hline 102}"
 						di as txt "g=`__g'"
-						di as txt _col(8)  "year" ///
-							_col(18) "ATT" ///
-							_col(30) "Std. err." ///
-							_col(43) "t" ///
-							_col(51) "P>|t|" ///
-							_col(60) "[`level'% conf. interval]"
-						di as txt "{hline 86}"
+						di as txt _col(6)  "year" ///
+							_col(16) "ATT" ///
+							_col(31) "Std. err." ///
+							_col(46) "t" ///
+							_col(60) "P>|t|" ///
+							_col(74) "[`level'% conf. interval]"
+						di as txt "{hline 102}"
 
 						forvalues __i = 1/`__N_attgt' {
 							if cohort[`__i'] == `__g' {
-								di as txt _col(8)  %6.0f time[`__i'] ///
-									as res _col(17) %10.0g att[`__i'] ///
-									as res _col(29) %10.0g se[`__i'] ///
-									as res _col(41) %7.2f  tstat[`__i'] ///
-									as res _col(50) %7.3f  pval[`__i'] ///
-									as res _col(60) %10.0g lower_ci[`__i'] ///
-									as res _col(72) %10.0g upper_ci[`__i']
+								di as txt _col(5)  %6.0f time[`__i'] ///
+									as res _col(14) %12.7f att[`__i'] ///
+									as res _col(29) %12.7f se[`__i'] ///
+									as res _col(44) %12.7f tstat[`__i'] ///
+									as res _col(58) %10.7f pval[`__i'] ///
+									as res _col(73) %12.7f lower_ci[`__i'] ///
+									as res _col(87) %12.7f upper_ci[`__i']
 							}
 						}
 					}
-					di as txt "{hline 86}"
+					di as txt "{hline 102}"
 					di as txt ""
 					restore
 				}
@@ -2083,8 +2202,9 @@ program define lwdid_large, eclass
             * --- Append plotting/reporting estimand as third column
                 WATT_pmat = WATT_pmat, WATT_plot
 
-            * --- Bootstrap matrix used for simultaneous event-study bands.
-            *     Pre_avg/Post_avg are reported with pointwise normal confidence intervals.
+			* --- Bootstrap matrix used for simultaneous event-study bands.
+			*     All table confidence intervals are pointwise normal.
+			*     Pre_avg/Post_avg do not receive simultaneous bands.
                 BS_all = BS_plot
             }
 
@@ -2095,7 +2215,7 @@ program define lwdid_large, eclass
             mata: st_numscalar("n_vr_sc", n_vr_sc)
             local n_vr = n_vr_sc
 
-            * point estimates and pointwise standard errors
+			* point estimates, standard errors, and pointwise confidence intervals
             forvalues col = 1/`n_vr' {
                 mata: st_numscalar("rv_sc", WATT_pmat[`col', 1])
                 mata: st_numscalar("theta_raw_sc",  WATT_pmat[`col', 2])
@@ -2106,6 +2226,8 @@ program define lwdid_large, eclass
                 local theta_raw_`col'  = theta_raw_sc
                 local theta_plot_`col' = theta_plot_sc
                 local se_plot_`col'    = se_plot_sc
+				local lo_ci_point_`col' = `theta_plot_`col'' - `z_point' * `se_plot_`col''
+				local hi_ci_point_`col' = `theta_plot_`col'' + `z_point' * `se_plot_`col''
             }
 
             mata: n_avg_sc = rows(AVG_pmat)
@@ -2149,10 +2271,10 @@ program define lwdid_large, eclass
                     exit 198
                 }
 
-                forvalues col = 1/`n_vr' {
-                    local lo_ci_plot_`col' = `theta_plot_`col'' - `c_sup' * `se_plot_`col''
-                    local hi_ci_plot_`col' = `theta_plot_`col'' + `c_sup' * `se_plot_`col''
-                }
+				forvalues col = 1/`n_vr' {
+					local lo_band_`col' = `theta_plot_`col'' - `c_sup' * `se_plot_`col''
+					local hi_band_`col' = `theta_plot_`col'' + `c_sup' * `se_plot_`col''
+				}
                 forvalues col = 1/`n_avg' {
                     local avg_lo_`col' = `avg_theta_`col'' - `z_point' * `avg_se_`col''
                     local avg_hi_`col' = `avg_theta_`col'' + `z_point' * `avg_se_`col''
@@ -2161,59 +2283,79 @@ program define lwdid_large, eclass
 
                    preserve
             qui use "`WATT_point'", clear
-            qui gen double se       = .
-            qui gen double lower_ci = .
-            qui gen double upper_ci = .
-            qui gen double watt_plot     = .
-            qui gen double se_plot       = .
-            qui gen double lower_ci_plot = .
-            qui gen double upper_ci_plot = .
-            qui gen double base_rminus1  = .
-            qui gen double watt_norm     = .
-            qui gen double lower_ci_norm = .
-            qui gen double upper_ci_norm = .
+			qui gen double se         = .
+			qui gen double lower_ci   = .
+			qui gen double upper_ci   = .
+			qui gen double lower_band = .
+			qui gen double upper_band = .
+			qui gen double watt_plot       = .
+			qui gen double se_plot         = .
+			qui gen double lower_ci_plot   = .
+			qui gen double upper_ci_plot   = .
+			qui gen double lower_band_plot = .
+			qui gen double upper_band_plot = .
+			qui gen double base_rminus1    = .
+			qui gen double watt_norm       = .
+			qui gen double lower_ci_norm   = .
+			qui gen double upper_ci_norm   = .
+			qui gen double lower_band_norm = .
+			qui gen double upper_band_norm = .
 
             quietly forval col = 1/`n_vr' {
-				qui replace watt_plot     = `theta_plot_`col''  if ryear == `rv_`col''
-				qui replace se_plot       = `se_plot_`col''     if ryear == `rv_`col''
-				qui replace lower_ci_plot = `lo_ci_plot_`col''  if ryear == `rv_`col''
-				qui replace upper_ci_plot = `hi_ci_plot_`col''  if ryear == `rv_`col''
+					qui replace watt_plot       = `theta_plot_`col''   if ryear == `rv_`col''
+					qui replace se_plot         = `se_plot_`col''      if ryear == `rv_`col''
+					qui replace lower_ci_plot   = `lo_ci_point_`col''  if ryear == `rv_`col''
+					qui replace upper_ci_plot   = `hi_ci_point_`col''  if ryear == `rv_`col''
+					qui replace lower_band_plot = `lo_band_`col''      if ryear == `rv_`col''
+					qui replace upper_band_plot = `hi_band_`col''      if ryear == `rv_`col''
 			}
 
 			if "`rolling'" == "detrend" {
-				qui replace watt_plot     = 0 if inlist(ryear,-1,-2)
-				qui replace lower_ci_plot = 0 if inlist(ryear,-1,-2)
-				qui replace upper_ci_plot = 0 if inlist(ryear,-1,-2)
-				qui replace se_plot       = 0 if inlist(ryear,-1,-2)
+					qui replace watt_plot       = 0 if inlist(ryear,-1,-2)
+					qui replace lower_ci_plot   = 0 if inlist(ryear,-1,-2)
+					qui replace upper_ci_plot   = 0 if inlist(ryear,-1,-2)
+					qui replace lower_band_plot = 0 if inlist(ryear,-1,-2)
+					qui replace upper_band_plot = 0 if inlist(ryear,-1,-2)
+					qui replace se_plot         = 0 if inlist(ryear,-1,-2)
 			}
 
-            qui replace se       = se_plot
-            qui replace lower_ci = lower_ci_plot
-            qui replace upper_ci = upper_ci_plot
+			qui replace se         = se_plot
+			qui replace lower_ci   = lower_ci_plot
+			qui replace upper_ci   = upper_ci_plot
+			qui replace lower_band = lower_band_plot
+			qui replace upper_band = upper_band_plot
 
         if "`rolling'" == "demean" {
             qui su watt if ryear == -1, meanonly
             local base = r(mean)
-            qui replace base_rminus1  = `base'
-            qui replace watt_norm     = watt_plot
-            qui replace lower_ci_norm = lower_ci_plot
-            qui replace upper_ci_norm = upper_ci_plot
+			qui replace base_rminus1    = `base'
+			qui replace watt_norm       = watt_plot
+			qui replace lower_ci_norm   = lower_ci_plot
+			qui replace upper_ci_norm   = upper_ci_plot
+			qui replace lower_band_norm = lower_band_plot
+			qui replace upper_band_norm = upper_band_plot
 
             * r = -1 is an anchor only: report it as exactly zero with no band
-            qui replace watt_norm     = 0 if ryear == -1
-            qui replace lower_ci_norm = 0 if ryear == -1
-            qui replace upper_ci_norm = 0 if ryear == -1
+			qui replace watt_norm       = 0 if ryear == -1
+			qui replace lower_ci_norm   = 0 if ryear == -1
+			qui replace upper_ci_norm   = 0 if ryear == -1
+			qui replace lower_band_norm = 0 if ryear == -1
+			qui replace upper_band_norm = 0 if ryear == -1
 
             * finalized results for demean: keep anchored series without subtracting WATT(-1)
-            qui replace watt     = watt_norm
-            qui replace lower_ci = lower_ci_norm
-            qui replace upper_ci = upper_ci_norm
+			qui replace watt       = watt_norm
+			qui replace lower_ci   = lower_ci_norm
+			qui replace upper_ci   = upper_ci_norm
+			qui replace lower_band = lower_band_norm
+			qui replace upper_band = upper_band_norm
         }
         else {
             * finalized results for non-demean cases: keep plotted series
-            qui replace watt     = watt_plot
-            qui replace lower_ci = lower_ci_plot
-            qui replace upper_ci = upper_ci_plot
+			qui replace watt       = watt_plot
+			qui replace lower_ci   = lower_ci_plot
+			qui replace upper_ci   = upper_ci_plot
+			qui replace lower_band = lower_band_plot
+			qui replace upper_band = upper_band_plot
         }
 
         * finalized standard errors
@@ -2240,6 +2382,8 @@ program define lwdid_large, eclass
         qui gen double se = .
         qui gen double lower_ci = .
         qui gen double upper_ci = .
+	        qui gen double lower_band = .
+	        qui gen double upper_band = .
         qui gen byte is_avg = 1
         qui gen double sort_order = .
 
@@ -2266,49 +2410,103 @@ program define lwdid_large, eclass
 
         sort sort_order
 
-        format watt se lower_ci upper_ci t_stat %10.0g
-        format p_value %5.3f
+	        * Printed large-N results use seven digits after the decimal point.
+	        format watt se lower_ci upper_ci lower_band upper_band t_stat p_value %12.7f
 
-		di as txt _n "{bf: Aggregated WATT(r) estimates}" 
-        * temporary variables for cleaner reporting only
-        capture drop low_ci up_ci
-        qui gen double low_ci = lower_ci
-        qui gen double up_ci  = upper_ci
+		* --- Display exposure-time estimates first.
+		di as txt _n "{bf: Aggregated WATT(r) estimates}"
+	        * Save pointwise confidence intervals and simultaneous confidence bands once each.
+	        capture drop low_ci up_ci low_band up_band
+	        qui gen double low_ci   = lower_ci
+	        qui gen double up_ci    = upper_ci
+	        qui gen double low_band = lower_band
+	        qui gen double up_band  = upper_band
 
-        format low_ci up_ci %10.0g
-        capture drop __Ncells_disp
-        qui gen str12 __Ncells_disp = cond(is_avg==1, "-", string(N_cells, "%9.0g"))
-        qui replace __Ncells_disp = "" if is_avg==0 & missing(N_cells)
-					di as txt "{hline 92}"
-					di as txt _col(3)  "effect" ///
-						_col(15) "WATT" ///
-						_col(27) "Std. err." ///
-						_col(40) "t" ///
-						_col(48) "P>|t|" ///
-						_col(57) "[`level'% CI/band]" ///
-						_col(82) "N cells"
-					di as txt "{hline 92}"
+	        format low_ci up_ci low_band up_band %12.7f
+	        capture drop __Ncells_disp
+	        qui gen str12 __Ncells_disp = string(N_cells, "%9.0g") if is_avg==0
+	        qui replace __Ncells_disp = "" if is_avg==0 & missing(N_cells)
+			
+			* Display -1 & -2 (with detrending) periods as missing in the table only.
+			tempvar anchor watt_disp se_disp t_disp p_disp lo_disp hi_disp
 
-					quietly count
-					forvalues __i = 1/`r(N)' {
-						di as txt _col(2)  %10s effect[`__i'] ///
-							as res _col(14) %10.0g watt[`__i'] ///
-							as res _col(26) %10.0g se[`__i'] ///
-							as res _col(38) %7.2f t_stat[`__i'] ///
-							as res _col(47) %7.3f p_value[`__i'] ///
-							as res _col(57) %10.0g low_ci[`__i'] ///
-							as res _col(69) %10.0g up_ci[`__i'] ///
-							as txt _col(82) %9s __Ncells_disp[`__i']
-					}
+			qui gen byte `anchor' = is_avg == 0 & ( ///
+				("`rolling'" == "demean"  & ryear == -1) | ///
+				("`rolling'" == "detrend" & inlist(ryear, -2, -1)) ///
+			)
 
-				di as txt "{hline 92}"
-				di as txt "Note: Pre_avg/Post_avg are weighted averages of the contributing ATT(g,t) cells;"
-				di as txt "      their confidence intervals are pointwise normal."
-				di as txt "Note: For WATT(r) rows, [95% CI/band] reports simultaneous confidence bands"
-				di as txt "      (reps = `reps')."
-				di as txt "Note: t statistics and p-values are pointwise normal."
+			qui gen double `watt_disp' = watt
+			qui gen double `se_disp'   = se
+			qui gen double `t_disp'    = t_stat
+			qui gen double `p_disp'    = p_value
+			qui gen double `lo_disp'   = low_ci
+			qui gen double `hi_disp'   = up_ci
 
-					
+			qui replace `watt_disp' = . if `anchor'
+			qui replace `se_disp'   = . if `anchor'
+			qui replace `t_disp'    = . if `anchor'
+			qui replace `p_disp'    = . if `anchor'
+			qui replace `lo_disp'   = . if `anchor'
+			qui replace `hi_disp'   = . if `anchor'
+
+		di as txt "{hline 93}"
+		di as txt _col(2)  "effect" ///
+			_col(13) "WATT" ///
+			_col(25) "Std. err." ///
+			_col(38) "t" ///
+			_col(50) "P>|t|" ///
+			_col(60) "[`level'% conf. interval]" ///
+			_col(85) "N cells"
+		di as txt "{hline 93}"
+
+		quietly count
+		local __N_display = r(N)
+
+		forvalues __i = 1/`__N_display' {
+			if is_avg[`__i'] == 0 {
+		di as txt _col(2)  %7s effect[`__i'] ///
+			as res _col(11) %10.7f `watt_disp'[`__i'] ///
+			as res _col(23) %10.7f `se_disp'[`__i'] ///
+			as res _col(35) %10.7f `t_disp'[`__i'] ///
+			as res _col(47) %9.7f  `p_disp'[`__i'] ///
+			as res _col(59) %10.7f `lo_disp'[`__i'] ///
+			as res _col(71) %10.7f `hi_disp'[`__i'] ///
+			as txt _col(85) %7s __Ncells_disp[`__i']
+			}
+		}
+
+		di as txt "{hline 93}"
+		* --- Display the weighted pre- and post-treatment averages separately, below WATT(r).
+		di as txt _n "{bf: Cohort-size-weighted averages of ATT(g,t)}"
+
+		di as txt "{hline 82}"
+		di as txt _col(2)  "effect" ///
+			_col(13) "ATT" ///
+			_col(25) "Std. err." ///
+			_col(38) "t" ///
+			_col(50) "P>|t|" ///
+			_col(60) "[`level'% conf. interval]"
+		di as txt "{hline 82}"
+
+		forvalues __i = 1/`__N_display' {
+			if is_avg[`__i'] == 1 {
+				di as txt _col(2)  %8s effect[`__i'] ///
+					as res _col(11) %10.7f watt[`__i'] ///
+					as res _col(23) %10.7f se[`__i'] ///
+					as res _col(35) %10.7f t_stat[`__i'] ///
+					as res _col(47) %9.7f  p_value[`__i'] ///
+					as res _col(59) %10.7f low_ci[`__i'] ///
+					as res _col(71) %10.7f up_ci[`__i']
+			}
+		}
+
+		di as txt "{hline 82}"
+
+		di as txt "Note: The table reports pointwise confidence intervals."
+		di as txt "      When graph is specified, simultaneous confidence bands are shown"
+		di as txt "      across all estimated event times using `reps' replications."
+		di as txt "      save() stores their bounds as low_band and up_band."
+			
 		* --- Graph
         if "`graph'" != "" {
                 if "`title'" == "" local title "lwdid: `method' (`rolling')"
@@ -2319,10 +2517,10 @@ program define lwdid_large, eclass
                 local xrange = `xmax' - `xmin'
                 local xstep = cond(`xrange'>40, 10, 5)
 
-                * y-axis range based on finalized confidence intervals
-                qui su upper_ci if !missing(upper_ci) & !missing(ryear), meanonly
+	                * y-axis range based on simultaneous confidence bands
+	                qui su up_band if !missing(up_band) & !missing(ryear), meanonly
                 local yhi = r(max)
-                qui su lower_ci if !missing(lower_ci) & !missing(ryear), meanonly
+	                qui su low_band if !missing(low_band) & !missing(ryear), meanonly
                 local ylo = r(min)
 
                 if (`yhi' - `ylo') < 0.2 {
@@ -2371,9 +2569,9 @@ program define lwdid_large, eclass
                 }
 
                 twoway ///
-                    (rcap lower_ci upper_ci ryear if !missing(ryear) & ryear < 0, ///
+	                    (rcap low_band up_band ryear if !missing(ryear) & ryear < 0, ///
                         lwidth(0.3) lcolor(`col_pre'%50)) ///
-                    (rcap lower_ci upper_ci ryear if !missing(ryear) & ryear >= 0, ///
+	                    (rcap low_band up_band ryear if !missing(ryear) & ryear >= 0, ///
                         lwidth(0.3) lcolor(`col_post'%60)) ///
                     (line watt ryear if !missing(ryear), ///
                         lcolor(gs8) lwidth(thin)) ///
@@ -2396,17 +2594,25 @@ program define lwdid_large, eclass
 		
 * --- save
  if "`save'" != "" {
-            qui keep effect ryear ///
-                watt se t_stat p_value low_ci up_ci ///
+	            qui keep effect ryear ///
+	                watt se t_stat p_value ///
+	                low_ci up_ci low_band up_band ///
                 N_cells N_units
 
             qui order effect ryear ///
-                watt se t_stat p_value low_ci up_ci ///
+	                watt se t_stat p_value ///
+	                low_ci up_ci low_band up_band ///
                 N_cells N_units
 
-            * keep general display formats in the saved result dataset
-            format watt se t_stat low_ci up_ci %10.0g
+            * Keep general display formats and descriptive labels in the saved result dataset.
+	            format watt se t_stat low_ci up_ci low_band up_band %10.0g
             format p_value %5.3f
+	            label var low_ci   "Lower bound: pointwise `level'% confidence interval"
+	            label var up_ci    "Upper bound: pointwise `level'% confidence interval"
+	            label var low_band "Lower bound: simultaneous `level'% confidence band"
+	            label var up_band  "Upper bound: simultaneous `level'% confidence band"
+				label var N_cells  "Number of group-time cells contributing to estimate"
+				label var N_units  "Total unit count across cells contributing to estimate" 
 
             qui save "`save'", replace
         }		

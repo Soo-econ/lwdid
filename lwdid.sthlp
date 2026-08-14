@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.4.3 10AUGUST2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
+{* *! version 2.5 10AUGUST2026 Soo Jeong Lee and Jeffrey M. Wooldridge *}
 {viewerjumpto "Syntax" "lwdid##syntax"}{...}
 {viewerjumpto "Description" "lwdid##description"}{...}
 {viewerjumpto "Options" "lwdid##options"}{...}
