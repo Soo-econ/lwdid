@@ -20,49 +20,6 @@ This page provides a concise overview of the command syntax, along with selected
 
 <br>
 
-# Citations
-
-`lwdid` is a user-written Stata command freely available for academic and research use.
-
-If you use `lwdid`, or develop software based on the original `lwdid` Stata module, please acknowledge the original module and cite the relevant paper(s) below.
-
-**[1] Large-N procedure**
-Lee, S. J. and Wooldridge, J. M. (2026a). 
-A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data, 
-*Journal of Business and Economic Statistics*,  1–27. [https://doi.org/10.1080/07350015.2026.2683047](https://doi.org/10.1080/07350015.2026.2683047).
-> Working Paper, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
-
-```text
-Lee, S. J. and Wooldridge, J. M. (2026a). A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data. Journal of Business & Economic Statistics, 1–27. https://doi.org/10.1080/07350015.2026.2683047
-```
-
-**[2] Small-N procedure** <br>
-
-Lee, S. J. and Wooldridge, J. M. (2026b). 
-Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes.
-Working Paper, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
-
-```text
-Lee, S. J. and Wooldridge, J. M. (2026b). Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes. Working Paper. Available at SSRN 5325686
-```
-
-**[3] Original Stata module**<br>
-
-Lee, S. J. and Wooldridge, J. M. (2026c). `lwdid`: Stata module to implement rolling difference-in-differences estimator for small-(N) and large-(N) panel data, *Statistical Software Components* S459672, Boston College Department of Economics, revised 1 June 2026.
-
-```text
-Lee, S. J. and Wooldridge, J. M. (2026c). lwdid: Stata module to implement rolling difference-in-differences estimator for small-N and large-N panel data. Statistical Software Components S459672, Boston College Department of Economics, revised 1 June 2026.
-```
-
-**[4] lwdid: command guidance** <br>
-
-Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels.
-Working Paper, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
-
-```text
-Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels. Working Paper. Available at SSRN 6502558
-```
-
 <a id="important-update-note"></a>
 ## 🚨 Important Update Note
 
@@ -77,30 +34,6 @@ Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Diffe
 > 	[2] Event-study graphs display simultaneous confidence bands (CBs).
 >
 > 	[3] When the save() option is specified, the saved .dta file includes the simultaneous confidence bands separately, making them directly available for further analysis or customized plotting.
-
-> **Previous SSC update-  June 15, 2026:**
-> 
-> - Fixed bugs; a potential naming conflict by no longer saving internally generated residualized outcome variables.
-> - For the large-N case, users can use the `ydot` option to save the residualized/transformed outcomes for additional analyses.
-> - The small-N `graph` option now displays y-axis labels with at least two decimal places.
->   
-> **Previous SSC update — June 1, 2026**
-> - new Large-\(N\) estimation options;
-> - `pre(#)`: allows users to choose how many pre-treatment periods are used in the outcome transformation. For example, `pre(1)` uses only the period immediately prior to the
-intervention, while `pre(3)` uses the three periods immediately prior to
-the intervention.
-> - `attgt`: reports group-time specific \(ATT(g,t)\) estimates. By default, `lwdid` reports event-time aggregated \(WATT(r)\) estimates only;
-> - `never`: uses only never-treated units as the comparison group. By default, `lwdid` uses both never-treated and not-yet-treated units.
->   
-> **Previous SSC update — April 27, 2026**
-> - improved handling of large datasets and large unit identifiers, including cases with values such as `1,000,000`;
-> - revised result-table presentation for cleaner reporting;
-> - updated event-study plotting and result-table reporting for the Large-\(N\) `rolling(demean)` procedure;
-> - improved storage of additional results through the `save()` option.
->
-<br>
-
-
 
 # Installation
 
@@ -457,18 +390,83 @@ Note that `t_stat` and `p_value` are **pointwise** quantities, while `low_ci` an
 
 
 
+# Citations
+
+`lwdid` is a user-written Stata command freely available for academic and research use.
+
+If you use `lwdid`, or develop software based on the original `lwdid` Stata module, please acknowledge the original module and cite the relevant paper(s) below.
+
+**[1] Large-N procedure**
+Lee, S. J. and Wooldridge, J. M. (2026a). 
+A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data, 
+*Journal of Business and Economic Statistics*,  1–27. [https://doi.org/10.1080/07350015.2026.2683047](https://doi.org/10.1080/07350015.2026.2683047).
+> Working Paper, Available at [SSRN 4516518](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4516518).
+
+```text
+Lee, S. J. and Wooldridge, J. M. (2026a). A Simple Transformation Approach to Difference-in-Differences Estimation for Panel Data. Journal of Business & Economic Statistics, 1–27. https://doi.org/10.1080/07350015.2026.2683047
+```
+
+**[2] Small-N procedure** <br>
+
+Lee, S. J. and Wooldridge, J. M. (2026b). 
+Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes.
+Working Paper, Available at [SSRN 5325686](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5325686).
+
+```text
+Lee, S. J. and Wooldridge, J. M. (2026b). Simple Approaches to Inference with Difference-in-Differences Estimators with Small Cross-Sectional Sample Sizes. Working Paper. Available at SSRN 5325686
+```
+
+**[3] Original Stata module**<br>
+
+Lee, S. J. and Wooldridge, J. M. (2026c). `lwdid`: Stata module to implement rolling difference-in-differences estimator for small-(N) and large-(N) panel data, *Statistical Software Components* S459672, Boston College Department of Economics, revised 1 June 2026.
+
+```text
+Lee, S. J. and Wooldridge, J. M. (2026c). lwdid: Stata module to implement rolling difference-in-differences estimator for small-N and large-N panel data. Statistical Software Components S459672, Boston College Department of Economics, revised 1 June 2026.
+```
+
+**[4] lwdid: command guidance** <br>
+
+Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels.
+Working Paper, Available at [SSRN 6502558](https://dx.doi.org/10.2139/ssrn.6502558).
+
+```text
+Hur, E. K., Lee, S. J. and Wooldridge, J. M. (2026). Rolling Difference-in-Differences Estimation for Small and Large Panels. Working Paper. Available at SSRN 6502558
+```
+
 <br>
 
 ## Contact and Updates
-
-Minor updates related to graph plotting (particularly for **Small-N: Staggered adoption** cases) are planned for upcoming releases — please stay tuned.
-
 
 __For questions or suggestions, feel free to reach out to the authors:__
 
 **[Soo Jeong Lee](https://sites.google.com/view/sjlee-econ/home)** ([soojeong.lee@siu.edu](mailto:soojeong.lee@siu.edu)) , Southern Illinois University Carbondale
 
 **Jeffrey M. Wooldridge** ([wooldri1@msu.edu](mailto:wooldri1@msu.edu)), Michigan State University
+
+<br>
+
+> **Previous SSC update-  June 15, 2026:**
+> 
+> - Fixed bugs; a potential naming conflict by no longer saving internally generated residualized outcome variables.
+> - For the large-N case, users can use the `ydot` option to save the residualized/transformed outcomes for additional analyses.
+> - The small-N `graph` option now displays y-axis labels with at least two decimal places.
+>   
+> **Previous SSC update — June 1, 2026**
+> - new Large-\(N\) estimation options;
+> - `pre(#)`: allows users to choose how many pre-treatment periods are used in the outcome transformation. For example, `pre(1)` uses only the period immediately prior to the
+intervention, while `pre(3)` uses the three periods immediately prior to
+the intervention.
+> - `attgt`: reports group-time specific \(ATT(g,t)\) estimates. By default, `lwdid` reports event-time aggregated \(WATT(r)\) estimates only;
+> - `never`: uses only never-treated units as the comparison group. By default, `lwdid` uses both never-treated and not-yet-treated units.
+>   
+> **Previous SSC update — April 27, 2026**
+> - improved handling of large datasets and large unit identifiers, including cases with values such as `1,000,000`;
+> - revised result-table presentation for cleaner reporting;
+> - updated event-study plotting and result-table reporting for the Large-\(N\) `rolling(demean)` procedure;
+> - improved storage of additional results through the `save()` option.
+>
+<br>
+
 
 <br><br><br><br> <br>
 
