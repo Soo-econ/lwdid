@@ -29,7 +29,7 @@ This page provides a concise overview of the command syntax, along with selected
 > - Small-(N) case: The graph option is now available, including for staggered treatment timing.
 > - Large-(N) case: To avoid confusion between pointwise and simultaneous inference for weighted ATT estimates:
 >   
->   [1]	Event-type weighted ATT estimates are reported with their corresponding confidence intervals (CIs).
+>   [1]	Results table: event-type weighted ATT estimates are reported with their corresponding confidence intervals (CIs).
 >   
 > 	[2] Event-study graphs display simultaneous confidence bands (CBs).
 >
