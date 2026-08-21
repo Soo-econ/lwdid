@@ -134,8 +134,8 @@ help lwdid
 ### Other Options
 
 | Option | Description |
-|------|-------------|
-| `save(name)` | Saves estimation results under the specified name |
+| ------------ | ----------------------------------------------------------------- |
+| `save(name)` | Saves estimation results to a `.dta` file with the specified name |
 | `reps(#)` |  **Large-N Only**. Number of wild bootstrap repetitions for large-N inference (default = 999) |
 | `vce(vartype)` | **Small-N Only:** Variance estimator for the regression (e.g., `var(robust)`, `var(cluster id)`, `var(hc3)`) |
 | `ri` |  **Small-N Only**. Requests randomization inference (RI) <br>•`rireps(#)` –Number of RI repetitions (default = 999).<br>•`riseed(#)` – Seed for reproducible RI p-value (default: randomly drawn; results may differ across runs if not specified)|
