@@ -340,9 +340,32 @@ This command produces the default graph plotting **weighted ATTs by relative tim
 <img src="subfolder/ex6.png">
 </div>
 
+By default, the `graph` option reports **simultaneous confidence intervals (CIs)** in the event-study graph.
+
+These confidence bands account for the fact that treatment effects are estimated at **multiple event times simultaneously**. In other words, the bands are constructed to provide joint coverage across all estimated relative-time periods, rather than a separate 95% confidence interval for each event time.
+
+If **pointwise confidence intervals** are preferred, add the `pointwise` option to the command.
+
+| Option | Confidence interval |
+|---|---|
+| `graph` | **Simultaneous confidence intervals (CIs)** |
+| `graph pointwise` | **Pointwise confidence intervals (CIs)** |
+
+For example:
+
+```stata
+lwdid log_wholesale_emp x1 x2 x3, ivar(cid) tvar(year) gvar(first_year) ///
+    rolling(detrend) method(ipwra) graph pointwise
+```
+
+<div align="center">
+<img src="subfolder/ex6-1.png">
+</div>
+
+
 <br>
 
-But, similarly, you can customize your graphs with `gopts` and `scheme` options: more over you can save the results, and apply your own graph stayle to plot the event-study graphs.
+In addition, you can customize your graphs with `gopts` and `scheme` options: more over you can save the results, and apply your own graph stayle to plot the event-study graphs.
 
 <br>
 
