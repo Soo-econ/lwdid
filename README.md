@@ -23,17 +23,17 @@ This page provides a concise overview of the command syntax, along with selected
 <a id="important-update-note"></a>
 ## 🚨 Important Update Note
 
-> **Version 2.4.3 (August 10, 2026) of `lwdid.ado` is now available on GitHub and is expected to be available on SSC by August 20, 2026.**
+> **Version 3.1 (August 21, 2026) of `lwdid.ado` is now available on GitHub and is expected to be available on SSC soon**
 >
 > **This update includes the following changes:**
-> - Small-(N) case: The graph option is now available, including for staggered treatment timing.
-> - Large-(N) case: To avoid confusion between pointwise and simultaneous inference for weighted ATT estimates:
+> - Small-(N) case: The `graph` option is now available, including for staggered treatment timing.
+> - Large-(N) case: 
 >   
->   [1]	Results table: event-type weighted ATT estimates are reported with their corresponding confidence intervals (CIs).
+>   [1]	**By default**, both the results table and event-study graph report simultaneous confidence bands (CBs) for the event-time weighted ATT estimates.
 >   
-> 	[2] Event-study graphs display simultaneous confidence bands (CBs).
+> 	[2] pecifying the `pointwise` option reports pointwise confidence intervals (CIs) instead in both the results table and graph.
 >
-> 	[3] When the save() option is specified, the saved .dta file includes the simultaneous confidence bands separately, making them directly available for further analysis or customized plotting.
+> 	[3] When the `save()` option is specified, the saved .dta file always includes both the pointwise confidence intervals and simultaneous confidence bands separately.
 
 # Installation
 
@@ -124,10 +124,10 @@ help lwdid
 
 ### Graph Options
 
-| Option | Description |
-|-------|-------------|
-| `graph` | Produces a graph of estimated treatment effects or residualized outcome paths |
-| `gopts(string)` | Additional graph options passed directly to the `twoway` command |
+| Option      | Description                                                                                                                      |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `graph`     | Produces a graph of estimated treatment effects or residualized outcome paths                                                    |
+| `pointwise` | Large-N only. Reports pointwise confidence intervals in the table and graph instead of the default simultaneous confidence bands |
 | `scheme(string)` | Graph scheme (e.g., `scheme(s1mono)` for black-and-white figures suitable for publication)) |
 | `gid(#\|string)` |  **Available option for small-N:** <br> Displays the treated path for a specific unit instead of the average treated trajectory <br> For example, if Michigan and Illinois are treated states and the identifier for Illinois is 9, specifying `gid(9)` plots the treated path for Illinois only.|
 
