@@ -1,4 +1,4 @@
-*! version 3 : 10 August 2026
+*! version 3.1 : 21 August 2026
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
@@ -30,6 +30,7 @@ program define lwdid, eclass sortpreserve
 			 VCE(string)                         ///
 			 TABLE(string)                       ///
 			 GRAPH                               ///
+			 POINTWISE                           ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
 			 SAVE(string)                        ///
@@ -139,6 +140,7 @@ program define lwdid_small_single, eclass
 			 VCE(string)                         ///
 			 TABLE(string)                       ///
 			 GRAPH                               ///
+			 POINTWISE                           ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
 			 SAVE(string)                      ///
@@ -942,6 +944,7 @@ program define lwdid_small_staggered, eclass
          VCE(string)                         ///
          TABLE(string)                       ///
          GRAPH                               ///
+         POINTWISE                           ///
          SCHEME(string)                      ///
          GOPTS(string asis)                  ///
          SAVE(string)                        ///
@@ -1305,6 +1308,7 @@ program define lwdid_large, eclass
          VCE(string)                         ///
          TABLE(string)                       ///
          GRAPH                               ///
+         POINTWISE                           ///
 		 SCHEME(string)						 ///
          GOPTS(string asis)                  ///
          SAVE(string)                      ///
@@ -1341,9 +1345,13 @@ program define lwdid_large, eclass
 			}
 			
 			*--- Large-N inference
-			*    Tables report pointwise normal confidence intervals.
-			*    Event-study graphs report simultaneous confidence bands.
+			*    Both pointwise confidence intervals and simultaneous confidence bands
+			*    are always computed (and both are retained by save()).
+			*    Default display: simultaneous bands in the WATT(r) table and graph.
+			*    pointwise option: pointwise confidence intervals in both table and graph.
 			local ci_type "simultaneous"
+			local interval_display "simultaneous"
+			if "`pointwise'" != "" local interval_display "pointwise"
 			
 			
 		* --- Internal compact numeric id for large-N computations.
@@ -2203,7 +2211,7 @@ program define lwdid_large, eclass
                 WATT_pmat = WATT_pmat, WATT_plot
 
 			* --- Bootstrap matrix used for simultaneous event-study bands.
-			*     All table confidence intervals are pointwise normal.
+			*     Both pointwise intervals and simultaneous bands are always computed.
 			*     Pre_avg/Post_avg do not receive simultaneous bands.
                 BS_all = BS_plot
             }
@@ -2439,8 +2447,16 @@ program define lwdid_large, eclass
 			qui gen double `se_disp'   = se
 			qui gen double `t_disp'    = t_stat
 			qui gen double `p_disp'    = p_value
-			qui gen double `lo_disp'   = low_ci
-			qui gen double `hi_disp'   = up_ci
+			if "`interval_display'" == "pointwise" {
+				qui gen double `lo_disp' = low_ci
+				qui gen double `hi_disp' = up_ci
+				local interval_header "[`level'% conf. interval]"
+			}
+			else {
+				qui gen double `lo_disp' = low_band
+				qui gen double `hi_disp' = up_band
+				local interval_header "[`level'% conf. band]"
+			}
 
 			qui replace `watt_disp' = . if `anchor'
 			qui replace `se_disp'   = . if `anchor'
@@ -2455,7 +2471,7 @@ program define lwdid_large, eclass
 			_col(25) "Std. err." ///
 			_col(38) "t" ///
 			_col(50) "P>|t|" ///
-			_col(60) "[`level'% conf. interval]" ///
+			_col(60) "`interval_header'" ///
 			_col(85) "N cells"
 		di as txt "{hline 93}"
 
@@ -2501,12 +2517,17 @@ program define lwdid_large, eclass
 		}
 
 		di as txt "{hline 82}"
-
-		di as txt "Note: The table reports pointwise confidence intervals."
-		di as txt "      When graph is specified, simultaneous confidence bands are shown"
-		di as txt "      across all estimated event times using `reps' replications."
-		di as txt "      save() stores their bounds as low_band and up_band."
-			
+			if "`interval_display'" == "simultaneous" {
+				di as txt "Current run: {bf:simultaneous confidence bands}."
+			}
+			else {
+				di as txt "Current run: {bf:pointwise confidence intervals}."
+			}
+		di as txt "Default: the table and graph report simultaneous `level'% confidence bands"
+		di as txt "         across all estimated event times (`reps' bootstrap replications)."
+		di as txt "Option:  specify pointwise to report pointwise `level'% confidence intervals instead."
+		di as txt "save():  always stores both low_ci/up_ci and low_band/up_band."
+		di as txt "Note:    Pre_avg/Post_avg intervals and reported p-values remain pointwise."
 		* --- Graph
         if "`graph'" != "" {
                 if "`title'" == "" local title "lwdid: `method' (`rolling')"
@@ -2517,10 +2538,16 @@ program define lwdid_large, eclass
                 local xrange = `xmax' - `xmin'
                 local xstep = cond(`xrange'>40, 10, 5)
 
-	                * y-axis range based on simultaneous confidence bands
-	                qui su up_band if !missing(up_band) & !missing(ryear), meanonly
+	                * y-axis range based on the interval type displayed in the graph
+	                local graph_lo "low_band"
+	                local graph_hi "up_band"
+	                if "`interval_display'" == "pointwise" {
+	                    local graph_lo "low_ci"
+	                    local graph_hi "up_ci"
+	                }
+	                qui su `graph_hi' if !missing(`graph_hi') & !missing(ryear), meanonly
                 local yhi = r(max)
-	                qui su low_band if !missing(low_band) & !missing(ryear), meanonly
+	                qui su `graph_lo' if !missing(`graph_lo') & !missing(ryear), meanonly
                 local ylo = r(min)
 
                 if (`yhi' - `ylo') < 0.2 {
@@ -2569,9 +2596,9 @@ program define lwdid_large, eclass
                 }
 
                 twoway ///
-	                    (rcap low_band up_band ryear if !missing(ryear) & ryear < 0, ///
+	                    (rcap `graph_lo' `graph_hi' ryear if !missing(ryear) & ryear < 0, ///
                         lwidth(0.3) lcolor(`col_pre'%50)) ///
-	                    (rcap low_band up_band ryear if !missing(ryear) & ryear >= 0, ///
+	                    (rcap `graph_lo' `graph_hi' ryear if !missing(ryear) & ryear >= 0, ///
                         lwidth(0.3) lcolor(`col_post'%60)) ///
                     (line watt ryear if !missing(ryear), ///
                         lcolor(gs8) lwidth(thin)) ///
