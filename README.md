@@ -23,7 +23,7 @@ This page provides a concise overview of the command syntax, along with selected
 <a id="important-update-note"></a>
 ## 🚨 Important Update Note
 
-> **Version 3.1 (August 21, 2026) of `lwdid.ado` is now available on GitHub and is expected to be available on SSC soon**
+> **Version 3.1 (August 21, 2026) of `lwdid.ado` is now available on SSC**
 >
 > **This update includes the following changes:**
 > - Small-(N) case: The `graph` option is now available, including for staggered treatment timing.
