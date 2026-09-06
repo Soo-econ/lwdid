@@ -127,7 +127,7 @@ help lwdid
 | Option      | Description                                                                                                                      |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `graph`     | Produces a graph of estimated treatment effects or residualized outcome paths                                                    |
-| `pointwise` | Large-N only. Reports pointwise confidence intervals in the table and graph instead of the default simultaneous confidence bands |
+| `cb` | Large-N only. Reports simultaneous confidence bands in the table and graph instead of the default pointwise confidence intervals |
 | `scheme(string)` | Graph scheme (e.g., `scheme(s1mono)` for black-and-white figures suitable for publication)) |
 | `gid(#\|string)` |  **Available option for small-N:** <br> Displays the treated path for a specific unit instead of the average treated trajectory <br> For example, if Michigan and Illinois are treated states and the identifier for Illinois is 9, specifying `gid(9)` plots the treated path for Illinois only.|
 
