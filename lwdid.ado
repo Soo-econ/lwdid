@@ -95,6 +95,12 @@ program define lwdid, eclass sortpreserve
 	*-- DISPATCH (small option)
 		if "`small'" != "" {
 			
+			    * cluster() is not supported in small-N mode
+				if "`cluster'" != "" {
+					di as err "cluster() is available only in large-N mode."
+					exit 198
+				}
+				
 				tempvar cohort
 				quietly egen `cohort' = tag(`gvar') if `gvar' > 0 & `touse'
 				quietly count if `cohort'
@@ -120,6 +126,8 @@ program define lwdid, eclass sortpreserve
 		else {
 				lwdid_large `0'
 			}
+			
+			
 end
 
 **# [2] lwdid_small_single
@@ -1684,12 +1692,21 @@ program define lwdid_large, eclass
 						if `psamp_gt'
 				}
 
+				
+				* VCE for cohort-time ATT(g,t)
+				* Default: heteroskedasticity-robust
+				* cluster(): cluster-robust at user-specified level
+				local __vce_att "vce(robust)"
+					if "`cluster'" != "" {
+						local __vce_att "vce(cluster `cluster_var')"
+					}
+				
 				* ------------------------------------------------------------
 				* Point estimation: ATT(g,t)
 				* ------------------------------------------------------------
 				if "`method'" == "ra" {
 					if "`xlist'" == "" {
-						qui regress `yvar' `dvar_g' if `touse' & `fvar_`t'' & `cont', vce(robust)
+						qui regress `yvar' `dvar_g' if `touse' & `fvar_`t'' & `cont', `__vce_att'
 					}
 					else {
 						local __lwdid_int_list ""
@@ -1697,15 +1714,15 @@ program define lwdid_large, eclass
 							local __lwdid_int_list `__lwdid_int_list' c.`dvar_g'#c.`__cx'
 						}
 						qui reg `yvar' `dvar_g' `current_x_list' `__lwdid_int_list' ///
-							if `touse' & `fvar_`t'' & `cont', vce(robust)
+							if `touse' & `fvar_`t'' & `cont', `__vce_att'
 					}
 				}
 				else if "`method'" == "ipw" {
-					qui reg `yvar' `dvar_g' [aw=`ipw_gt'] if `psamp_gt', vce(robust)
+					qui reg `yvar' `dvar_g' [aw=`ipw_gt'] if `psamp_gt', `__vce_att'
 				}
 				else if "`method'" == "ipwra" {
 					if "`xlist'" == "" {
-						qui reg `yvar' `dvar_g' [aw=`ipw_gt'] if `psamp_gt', vce(robust)
+						qui reg `yvar' `dvar_g' [aw=`ipw_gt'] if `psamp_gt', `__vce_att'
 					}
 					else {
 						local __lwdid_int_list ""
@@ -1713,7 +1730,7 @@ program define lwdid_large, eclass
 							local __lwdid_int_list `__lwdid_int_list' c.`dvar_g'#c.`__cx'
 						}
 						qui reg `yvar' `dvar_g' `current_x_list' `__lwdid_int_list' ///
-							[aw=`ipw_gt'] if `psamp_gt', vce(robust)
+							[aw=`ipw_gt'] if `psamp_gt', `__vce_att'
 					}
 				}
 				else if "`method'" == "psmatch" {
