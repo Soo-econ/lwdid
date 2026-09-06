@@ -1,4 +1,4 @@
-*! version 3.1 : 21 August 2026
+*! version 3.2 : 6 September 2026
 *! lwdid - Lee & Wooldridge rolling DID estimator (unified: small-N + large-N)
 *! authors: Soo Jeong Lee, Jeffrey M. Wooldridge
 *! contact: soojeong.lee@siu.edu, wooldri1@msu.edu
@@ -30,7 +30,7 @@ program define lwdid, eclass sortpreserve
 			 VCE(string)                         ///
 			 TABLE(string)                       ///
 			 GRAPH                               ///
-			 POINTWISE                           ///
+			 CB                                  ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
 			 SAVE(string)                        ///
@@ -141,6 +141,7 @@ program define lwdid_small_single, eclass
 			 TABLE(string)                       ///
 			 GRAPH                               ///
 			 POINTWISE                           ///
+			 CB                                  ///
 			 SCHEME(string)						 ///
 			 GOPTS(string asis)                  ///
 			 SAVE(string)                      ///
@@ -945,6 +946,7 @@ program define lwdid_small_staggered, eclass
          TABLE(string)                       ///
          GRAPH                               ///
          POINTWISE                           ///
+         CB                                  ///
          SCHEME(string)                      ///
          GOPTS(string asis)                  ///
          SAVE(string)                        ///
@@ -1309,6 +1311,7 @@ program define lwdid_large, eclass
          TABLE(string)                       ///
          GRAPH                               ///
          POINTWISE                           ///
+         CB                                  ///
 		 SCHEME(string)						 ///
          GOPTS(string asis)                  ///
          SAVE(string)                      ///
@@ -1329,7 +1332,6 @@ program define lwdid_large, eclass
 		local rolling = lower("`rolling'")
 
 		local method  = lower("`method'") 
-			local method = lower("`method'")
 			*-- large-N: method required
 			if "`method'" == "" {
 				di as err "method() required for large-N mode: ra, ipw, or ipwra"
@@ -1345,18 +1347,18 @@ program define lwdid_large, eclass
 			}
 			
 			*--- Large-N inference
-			*    Both pointwise confidence intervals and simultaneous confidence bands
-			*    are always computed (and both are retained by save()).
-			*    Default display: simultaneous bands in the WATT(r) table and graph.
-			*    pointwise option: pointwise confidence intervals in both table and graph.
-			local ci_type "simultaneous"
+			*    Default display: pointwise confidence intervals.
+			*    cb option: simultaneous confidence bands across ALL displayed event times
+		local ci_type "simultaneous"
+		local interval_display "pointwise"
+		if "`cb'" != "" {
 			local interval_display "simultaneous"
-			if "`pointwise'" != "" local interval_display "pointwise"
+		}
 			
 			
-		* --- Internal compact numeric id for large-N computations.
-		*     Always regroup ivar(), even when it is already numeric, to avoid
-		*     storing long/high-dimensional original identifiers in local macros.
+			* --- Internal compact numeric id for large-N computations.
+			*     Always regroup ivar(), even when it is already numeric, to avoid
+			*     storing long/high-dimensional original identifiers in local macros.
 			local id_orig `ivar'
 			quietly count if `touse' & missing(`ivar')
 			if r(N) > 0 {
@@ -2253,25 +2255,9 @@ program define lwdid_large, eclass
             }
 
             if "`ci_type'" == "simultaneous" {
-                mata {
-                    se_vec  = sqrt(diagonal(variance(BS_all)))  // column vector
-                    reps_bs = rows(BS_all)
-                    n_cols  = cols(BS_all)
-                    T_star  = J(reps_bs, 1, .)
-                    for (b = 1; b <= reps_bs; b++) {
-                        z_b = J(1, n_cols, 0)
-                        for (j = 1; j <= n_cols; j++) {
-                            if (se_vec[j] > 0 & se_vec[j] < .) {
-                                z_b[j] = abs(BS_all[b,j] / se_vec[j])
-                            }
-                        }
-                        T_star[b] = max(z_b)
-                    }
-                    T_sort = sort(T_star, 1)
-                    nT     = rows(T_sort)
-                    q_idx  = min((nT, max((1, ceil((1-`alpha') * nT)))))
-                    st_numscalar("c_sup_sc", T_sort[q_idx])
-                }
+                * Simultaneous critical value over the full displayed event-study path
+                * (all pre- and post-treatment event times; anchor columns are zero).
+                mata: st_numscalar("c_sup_sc", lwdid_csup_all(BS_all, `alpha'))
                 local c_sup = c_sup_sc
 
                 if "`c_sup'" == "" | "`c_sup'" == "." {
@@ -2517,17 +2503,14 @@ program define lwdid_large, eclass
 		}
 
 		di as txt "{hline 82}"
-			if "`interval_display'" == "simultaneous" {
-				di as txt "Current run: {bf:simultaneous confidence bands}."
-			}
-			else {
-				di as txt "Current run: {bf:pointwise confidence intervals}."
-			}
-		di as txt "Default: the table and graph report simultaneous `level'% confidence bands"
-		di as txt "         across all estimated event times (`reps' bootstrap replications)."
-		di as txt "Option:  specify pointwise to report pointwise `level'% confidence intervals instead."
-		di as txt "save():  always stores both low_ci/up_ci and low_band/up_band."
-		di as txt "Note:    Pre_avg/Post_avg intervals and reported p-values remain pointwise."
+
+		if "`interval_display'" == "simultaneous" {
+			di as txt "Current run: {bf:simultaneous `level'% confidence bands} over all estimated event times (pre + post)."
+			di as txt "Simultaneous critical value: " as res %7.4f `c_sup'
+		}
+		else {
+			di as txt "Current run: {bf:pointwise `level'% confidence intervals}."
+		}
 		* --- Graph
         if "`graph'" != "" {
                 if "`title'" == "" local title "lwdid: `method' (`rolling')"
@@ -2620,29 +2603,50 @@ program define lwdid_large, eclass
         }
 		
 * --- save
- if "`save'" != "" {
-	            qui keep effect ryear ///
-	                watt se t_stat p_value ///
-	                low_ci up_ci low_band up_band ///
-                N_cells N_units
+		if "`save'" != "" {
 
-            qui order effect ryear ///
-	                watt se t_stat p_value ///
-	                low_ci up_ci low_band up_band ///
-                N_cells N_units
+			if "`cb'" != "" {
+				qui keep effect ryear ///
+					watt se t_stat p_value ///
+					low_ci up_ci low_band up_band ///
+					N_cells N_units
 
-            * Keep general display formats and descriptive labels in the saved result dataset.
-	            format watt se t_stat low_ci up_ci low_band up_band %10.0g
-            format p_value %5.3f
-	            label var low_ci   "Lower bound: pointwise `level'% confidence interval"
-	            label var up_ci    "Upper bound: pointwise `level'% confidence interval"
-	            label var low_band "Lower bound: simultaneous `level'% confidence band"
-	            label var up_band  "Upper bound: simultaneous `level'% confidence band"
-				label var N_cells  "Number of group-time cells contributing to estimate"
-				label var N_units  "Total unit count across cells contributing to estimate" 
+				qui order effect ryear ///
+					watt se t_stat p_value ///
+					low_ci up_ci low_band up_band ///
+					N_cells N_units
 
-            qui save "`save'", replace
-        }		
+				format watt se t_stat low_ci up_ci low_band up_band %10.0g
+				format p_value %5.3f
+
+				label var low_ci   "Lower bound: pointwise `level'% confidence interval"
+				label var up_ci    "Upper bound: pointwise `level'% confidence interval"
+				label var low_band "Lower bound: simultaneous `level'% confidence band"
+				label var up_band  "Upper bound: simultaneous `level'% confidence band"
+			}
+			else {
+				qui keep effect ryear ///
+					watt se t_stat p_value ///
+					low_ci up_ci ///
+					N_cells N_units
+
+				qui order effect ryear ///
+					watt se t_stat p_value ///
+					low_ci up_ci ///
+					N_cells N_units
+
+				format watt se t_stat low_ci up_ci %10.0g
+				format p_value %5.3f
+
+				label var low_ci "Lower bound: pointwise `level'% confidence interval"
+				label var up_ci  "Upper bound: pointwise `level'% confidence interval"
+			}
+
+			label var N_cells "Number of group-time cells contributing to estimate"
+			label var N_units "Total unit count across cells contributing to estimate"
+
+			qui save "`save'", replace
+		}	
 			restore
 
 			* --- Optionally save residualized outcomes y{g}d (only if ydot requested)
@@ -2668,6 +2672,11 @@ program define lwdid_large, eclass
 					}
 				}
 			}
+
+			* --- Store inference metadata
+			ereturn scalar cb_crit = `c_sup'
+			ereturn local ci_default "pointwise"
+			ereturn local ci_display "`interval_display'"
 
 			* --- Restore user's original xtset settings
 			if `__lwdid_had_xtset' {
@@ -2697,6 +2706,35 @@ program define lwdid_large, eclass
 			}
 		}
 	end
+
+
+* --- Mata helper: simultaneous critical value over all event-time columns
+capture mata: mata drop lwdid_csup_all()
+mata:
+real scalar lwdid_csup_all(real matrix BS, real scalar alpha)
+{
+    real colvector se, T, Ts
+    real rowvector z
+    real scalar b, j, B, K, q
+
+    B  = rows(BS)
+    K  = cols(BS)
+    se = sqrt(diagonal(variance(BS)))
+    T  = J(B, 1, .)
+
+    for (b=1; b<=B; b++) {
+        z = J(1, K, 0)
+        for (j=1; j<=K; j++) {
+            if (se[j] > 0 & se[j] < .) z[j] = abs(BS[b,j] / se[j])
+        }
+        T[b] = max(z)
+    }
+
+    Ts = sort(T, 1)
+    q  = min((B, max((1, ceil((1-alpha)*B)))))
+    return(Ts[q])
+}
+end
 
 
 **# RI
