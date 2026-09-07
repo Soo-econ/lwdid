@@ -23,17 +23,16 @@ This page provides a concise overview of the command syntax, along with selected
 <a id="important-update-note"></a>
 ## 🚨 Important Update Note
 
-> **Version 3.1 (August 21, 2026) of `lwdid.ado` is now available on SSC**
+> **Version 3.2 (September 6, 2026) of `lwdid.ado` is now available on SSC**
 >
 > **This update includes the following changes:**
 > - Small-(N) case: The `graph` option is now available, including for staggered treatment timing.
 > - Large-(N) case: 
 >   
->   [1]	**By default**, both the results table and event-study graph report simultaneous confidence bands (CBs) for the event-time weighted ATT estimates.
+>   [1]	**By default**, both the results table and event-study graph report pointwise confidence intervals (CIs) for the event-time weighted ATT estimates.
 >   
-> 	[2] pecifying the `pointwise` option reports pointwise confidence intervals (CIs) instead in both the results table and graph.
+> 	[2] Specifying the `cb` option reports simultaneous confidence bands (CBs) instead in both the results table and graph.
 >
-> 	[3] When the `save()` option is specified, the saved .dta file always includes both the pointwise confidence intervals and simultaneous confidence bands separately.
 
 # Installation
 
