@@ -336,29 +336,29 @@ This command produces the default graph plotting **weighted ATTs by relative tim
 * `r < 0`: pre-treatment periods
 
 <div align="center">
-<img src="subfolder/ex6.png">
+<img src="subfolder/ex6-1.png">
 </div>
 
-By default, the `graph` option reports **simultaneous confidence intervals (CIs)** in the event-study graph.
+By default, the `graph` option reports **pointwise confidence intervals (CIs)** in the event-study graph.
 
-These confidence bands account for the fact that treatment effects are estimated at **multiple event times simultaneously**. In other words, the bands are constructed to provide joint coverage across all estimated relative-time periods, rather than a separate 95% confidence interval for each event time.
 
-If **pointwise confidence intervals** are preferred, add the `pointwise` option to the command.
+If **simultaneous confidence bands** are preferred, add the `cb` option to the command.
+These confidence bands account for the fact that treatment effects are estimated at **multiple event times simultaneously**. In other words, the bands are constructed to provide joint coverage across relative time **`r`**, rather than a separate 95% confidence interval for each event time.
 
 | Option | Confidence interval |
 |---|---|
-| `graph` | **Simultaneous confidence intervals (CIs)** |
-| `graph pointwise` | **Pointwise confidence intervals (CIs)** |
+| `graph` | **Pointwise confidence intervals (CIs)** |
+| `graph cb` | **Simultaneous confidence bands (CBs)** |
 
 For example:
 
 ```stata
 lwdid log_wholesale_emp x1 x2 x3, ivar(cid) tvar(year) gvar(first_year) ///
-    rolling(detrend) method(ipwra) graph pointwise
+    rolling(detrend) method(ipwra) graph cb
 ```
 
 <div align="center">
-<img src="subfolder/ex6-1.png">
+<img src="subfolder/ex6.png">
 </div>
 
 
@@ -372,7 +372,7 @@ In addition, you can customize your graphs with `gopts` and `scheme` options: mo
 
 ```stata
 lwdid log_wholesale_emp x1 x2 x3, ivar(cid) tvar(year) gvar(first_year) ///
-      rolling(detrend) method(ipwra) save(myresult) graph scheme(s2color) ///
+      rolling(detrend) method(ipwra) save(myresult) graph cb scheme(s2color) ///
       gopts( ytitle("WATT") xtitle("Time to Treatment(r)") title("The Effects of Walmart opening on ln(Wholesale Emp)") ///
 				ylabel(-.4(.1).25, format(%3.1f) angle(horizontal)) ///
              graphregion(color(white)) plotregion(color(white)) )		
@@ -388,9 +388,9 @@ In this example:
 <img src="subfolder/ex7.png">
 </div>
 
-By default, the graph reports **simultaneous confidence bands** for the event-study path. 
+**simultaneous confidence bands** for the event-study path.
 
-These bands are designed to provide uniform coverage across the reported event times $r$, rather than pointwise coverage for each $r$ separately.
+By default, the graph reports pointwise confidence intervals.  The option `cb` provide **simultaneous confidence bands** for the event-study path.
 
 The option `save(myresult)` also creates a new dataset, `myresult.dta`, in the working directory. This file contains:
 
