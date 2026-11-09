@@ -89,7 +89,7 @@ help lwdid
 | `ivar(varname)` | Panel identifier (numeric or string) |
 | `tvar(varname)` | Time variable. The format of the variable determines the data frequency:<br><br>• Annual: numeric year variable (e.g., `year`)<br>• Quarterly: Stata quarterly date (e.g., `%tq`)<br>• Monthly: Stata monthly date (e.g., `%tm`) |
 | `gvar(varname)` | Treatment cohort variable (first treated period). Never‐treated units should be coded as 0.|
-| `rolling(type)` | Unit-specific Transformation type used to residualize the outcome variable. <br><br> **Available types:** <br> • `demean` – removes the unit-specific pre-treatment mean <br> • `detrend` – removes the unit-specific linear pre-treatment trend <br> • `demeanq` – demeaning with quarter-of-year effects removed <br> • `detrendq` – detrending with quarter-of-year effects removed <br> • `demeanm` – demeaning with month-of-year effects removed <br> • `detrendm` – detrending with month-of-year effects removed <br><br> *Note:* These options require `tvar()` and `gvar()` to be defined on the same Stata date scale. See [Example 2: Using Quarterly (or Monthly) Data](#example-2-using-quarterly-data) for details.|
+| `rolling(type)` | Unit-specific Transformation type used to residualize the outcome variable. <br><br> **Available types:** <br> • `demean` – removes the unit-specific pre-treatment mean <br> • `detrend` – removes the unit-specific linear pre-treatment trend <br> • `demeanq` – demeaning with quarter-of-year effects removed <br> • `detrendq` – detrending with quarter-of-year effects removed <br> • `demeanm` – demeaning with month-of-year effects removed <br> • `detrendm` – detrending with month-of-year effects removed <br><br> *Note:* These options require `tvar()` and `gvar()` to be defined on the same Stata date scale. See [Example 3: Using Quarterly (or Monthly) Data](#example-3-using-quarterly-or-monthly-data) for details.|
 
 
 ### **Required Estimation Options (depends on implementation)**
@@ -209,7 +209,7 @@ lwdid lcigsale, small ivar(state) tvar(year) gvar(first_year) rolling(detrend) s
 <img src="subfolder/ex4.png">
 </div>
 
-## \[Example 3\] Using Quarterly (or Monthly) data 
+## [Example 3] Using Quarterly (or Monthly) data 
 
 For quarterly data, `rolling(demeanq)` or `rolling(detrendq)` can be used to account for seasonality.  
 For monthly data, `rolling(demeanm)` or `rolling(detrendm)` can be used to remove month-of-year effects.
