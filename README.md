@@ -45,28 +45,21 @@ To download the `.dta` files used to replicate the results in the paper and the 
 net get lwdid
 ```
 
-To view the help file and code description, please run:
-```
-help lwdid
-```
-
 > 🚨 To install the latest version directly from GitHub, run the following command in Stata:
 ```
  net install lwdid, from("https://raw.githubusercontent.com/Soo-econ/lwdid/main/") replace
  ```
  
-
 <br>
 
 # Syntax
 ```
-lwdid yvar [covariates], ivar(varname) tvar(varname) gvar(varname) rolling(type)
-          [method(estimator) small graph gopts(string) scheme(string)
-           gid(string) table("filename") save(name)
-           ri rireps(#) riseed(#)]
+lwdid yvar [covariates], ivar(varname) tvar(varname) ///
+    gvar(varname) rolling(type) ///
+    {method(estimator) | small} [options]
 ```
 
-To view the full syntax and option descriptions directly in Stata:
+For full syntax, options, and examples, see:
 ```
 help lwdid
 ```
@@ -96,7 +89,7 @@ help lwdid
 | Option | Description |
 |--------|--------------|
 | `small` | **Small-N Only** <br> Requests the small-sample inference procedure designed for settings with few treated (or control) units (default: large-N inference).|
-|`method(ra\|ipw\|ipwra)`| <br>**Large-N Only: required unless `small` is specified**<br>•`method(ra)` –Regression Adjustment estimator <br>•`method(ipw)` – Inverse Probability Weighting estimator. <br>•`method(ipwra)` – Doubly‑robust IPW‑RA estimator.<br><br>|
+|`method(ra\|ipw\|ipwra)`| <br>**Large-N Only: required unless `small` is specified**<br>•`method(ra)` –Regression Adjustment estimator <br>•`method(ipw)` – Inverse Probability Weighting estimator. <br>•`method(ipwra)` – Doubly‑robust IPWRA estimator.<br><br>|
 
 ---
 
@@ -129,7 +122,7 @@ help lwdid
 | `save(name)` | Saves estimation results to a `.dta` file with the specified name |
 | `reps(#)` |  **Large-N Only**. Number of wild bootstrap repetitions for large-N inference (default = 999) |
 | `vce(vartype)` | **Small-N Only:** Variance estimator for the regression (e.g., `var(robust)`, `var(cluster id)`, `var(hc3)`) |
-| `ri` |  **Small-N Only**. Requests randomization inference (RI) <br>•`rireps(#)` –Number of RI repetitions (default = 999).<br>•`riseed(#)` – Seed for reproducible RI p-value (default: randomly drawn; results may differ across runs if not specified)|
+| `ri` | **Small-N common timing only.** Requests built-in randomization inference (RI).<br>• `rireps(#)` – Number of RI repetitions (default = 999).<br>• `riseed(#)` – Seed for reproducible RI p-values (default: randomly drawn; results may differ across runs if not specified).<br><br>For small-N staggered adoption, the external `ritest` command can be used under appropriate treatment-assignment assumptions. See the `ritest` example in `help lwdid`. |
 
 ---
 
