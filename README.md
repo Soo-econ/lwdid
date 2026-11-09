@@ -128,6 +128,38 @@ help lwdid
 
 <br>
 
+## Saved Results
+
+`lwdid` stores estimation results, including coefficients, standard errors, and sample counts (treated, untreated, and total observations), in `e()`.
+
+Key stored matrices include:
+
+| Matrix | Description |
+|---|---|
+| `e(watt)` | Event-time WATT estimates and sample counts (large-N). |
+| `e(attgt)` | Cohort-by-period ATT(g,t) estimates, standard errors, and sample counts. In small-N staggered adoption, only post-treatment cells are included. |
+
+To inspect the stored results in Stata:
+
+```stata
+ereturn list
+matrix list e(watt)
+matrix list e(attgt)
+```
+
+Estimated coefficients and standard errors can also be accessed using `_b[]` and `_se[]`. To identify coefficient names and save estimates for later use:
+
+```stata
+ereturn display, coeflegend
+scalar post_att = _b[Post_avg]
+```
+
+For the complete list of stored results, see [lwdid.sthlp](https://github.com/Soo-econ/lwdid/blob/main/lwdid.sthlp) or run `help lwdid` in Stata.
+
+---
+
+<br>
+
 # Examples
 
 This section illustrates basic usage of `lwdid` and shows how to replicate the main results reported in the accompanying papers.
